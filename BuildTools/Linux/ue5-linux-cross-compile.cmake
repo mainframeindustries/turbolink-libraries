@@ -65,7 +65,7 @@ set(FLAGS_RELWITHDEBINFO " -O3 -g -D_DEBUG")
 set(CMAKE_SYSTEM_INCLUDE_PATH "")
 set(CMAKE_INCLUDE_PATH	"")
 
-include_directories("${UE_THIRD_PARTY_PATH}/Linux/LibCxx/include/c++/v1")
+include_directories("${UE_THIRD_PARTY_PATH}/Unix/LibCxx/include/c++/v1")
 include_directories("${CLANG_TOOLCHAIN_ROOT}/usr/include")
 
 
