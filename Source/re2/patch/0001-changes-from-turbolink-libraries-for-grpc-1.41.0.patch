@@ -1,0 +1,37 @@
+From 81b05711a00bfda1da08de27a733f0d12760f1e2 Mon Sep 17 00:00:00 2001
+From: ZezhongWang <904192625@qq.com>
+Date: Wed, 18 Jan 2023 17:16:14 +0200
+Subject: [PATCH] changes from turbolink libraries for grpc 1.41.0
+
+---
+ CMakeLists.txt | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index fcd3870..d39f236 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -152,6 +152,8 @@ set(RE2_HEADERS
+     re2/stringpiece.h
+     )
+ 
++set(RE2_CMAKE_INSTALL_PATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_CMAKEDIR}")
++
+ install(FILES ${RE2_HEADERS}
+         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/re2)
+ install(TARGETS re2 EXPORT re2Config
+@@ -160,4 +162,10 @@ install(TARGETS re2 EXPORT re2Config
+         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+         INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+ install(EXPORT re2Config
+-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/re2 NAMESPACE re2::)
++        DESTINATION ${RE2_CMAKE_INSTALL_PATH} NAMESPACE re2::)
++
++if(WIN32)
++install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Debug/re2.pdb
++		DESTINATION ${CMAKE_INSTALL_LIBDIR}
++		CONFIGURATIONS Debug)
++endif()
+-- 
+2.39.0.windows.1
+
