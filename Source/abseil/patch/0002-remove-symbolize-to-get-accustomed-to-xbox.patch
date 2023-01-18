@@ -1,0 +1,33 @@
+From 69eca57c7c1cdc3580ff1efa7ca3642a0b998d87 Mon Sep 17 00:00:00 2001
+From: ZezhongWang <904192625@qq.com>
+Date: Wed, 18 Jan 2023 15:26:18 +0200
+Subject: [PATCH 2/2] remove symbolize to get accustomed to xbox
+
+---
+ absl/debugging/symbolize.cc | 12 ------------
+ 1 file changed, 12 deletions(-)
+
+diff --git a/absl/debugging/symbolize.cc b/absl/debugging/symbolize.cc
+index 638d3954..6f0a0c2c 100644
+--- a/absl/debugging/symbolize.cc
++++ b/absl/debugging/symbolize.cc
+@@ -28,16 +28,4 @@
+ #define ABSL_INTERNAL_HAVE_SYMBOLIZE_WASM
+ #endif
+ 
+-#if defined(ABSL_INTERNAL_HAVE_ELF_SYMBOLIZE)
+-#include "absl/debugging/symbolize_elf.inc"
+-#elif defined(ABSL_INTERNAL_HAVE_SYMBOLIZE_WIN32)
+-// The Windows Symbolizer only works if PDB files containing the debug info
+-// are available to the program at runtime.
+-#include "absl/debugging/symbolize_win32.inc"
+-#elif defined(__APPLE__)
+-#include "absl/debugging/symbolize_darwin.inc"
+-#elif defined(ABSL_INTERNAL_HAVE_SYMBOLIZE_WASM)
+-#include "absl/debugging/symbolize_emscripten.inc"
+-#else
+ #include "absl/debugging/symbolize_unimplemented.inc"
+-#endif
+-- 
+2.39.0.windows.1
+

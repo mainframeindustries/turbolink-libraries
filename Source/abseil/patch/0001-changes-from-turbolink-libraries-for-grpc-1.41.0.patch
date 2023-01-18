@@ -1,30 +1,55 @@
+From c5f40748db168c23b0c994a55c57848f078ed4a9 Mon Sep 17 00:00:00 2001
+From: ZezhongWang <904192625@qq.com>
+Date: Wed, 18 Jan 2023 15:12:11 +0200
+Subject: [PATCH 1/2] changes from turbolink-libraries for grpc 1.41.0
+
+---
+ CMake/AbseilHelpers.cmake                     | 21 +++-------
+ CMake/abslConfig.cmake.in                     | 10 ++++-
+ CMakeLists.txt                                | 19 ++++++---
+ absl/CMakeLists.txt                           |  2 +
+ absl/base/CMakeLists.txt                      |  2 +
+ absl/base/internal/low_level_alloc.cc         | 39 +++++++++++++++++++
+ absl/base/internal/low_level_alloc.h          |  2 +-
+ absl/base/internal/raw_logging.cc             |  2 +-
+ absl/base/internal/sysinfo.cc                 |  2 +-
+ absl/base/internal/thread_identity.cc         |  6 ++-
+ absl/debugging/CMakeLists.txt                 |  2 +
+ absl/debugging/failure_signal_handler.cc      |  2 +
+ absl/debugging/internal/examine_stack.cc      |  2 +
+ .../internal/cctz/src/time_zone_format.cc     |  6 +--
+ absl/time/internal/cctz/src/time_zone_info.cc |  2 +-
+ absl/time/internal/cctz/src/time_zone_libc.cc | 26 +++++++++++++
+ .../internal/cctz/src/time_zone_lookup.cc     |  4 +-
+ 17 files changed, 117 insertions(+), 32 deletions(-)
+
 diff --git a/CMake/AbseilHelpers.cmake b/CMake/AbseilHelpers.cmake
-index 54fb8df3..1ab01948 100644
+index dbb09fe2..d370d382 100644
 --- a/CMake/AbseilHelpers.cmake
 +++ b/CMake/AbseilHelpers.cmake
-@@ -167,21 +167,6 @@ function(absl_cc_library)
-           set(PC_CFLAGS "${PC_CFLAGS} ${cflag}")
+@@ -171,21 +171,6 @@ function(absl_cc_library)
          endif()
        endforeach()
+       string(REPLACE ";" " " PC_LINKOPTS "${ABSL_CC_LIB_LINKOPTS}")
 -      FILE(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/lib/pkgconfig/absl_${_NAME}.pc" CONTENT "\
 -prefix=${CMAKE_INSTALL_PREFIX}\n\
 -exec_prefix=\${prefix}\n\
--libdir=\${prefix}/${CMAKE_INSTALL_LIBDIR}\n\
--includedir=\${prefix}/${CMAKE_INSTALL_INCLUDEDIR}\n\
+-libdir=${CMAKE_INSTALL_FULL_LIBDIR}\n\
+-includedir=${CMAKE_INSTALL_FULL_INCLUDEDIR}\n\
 -\n\
 -Name: absl_${_NAME}\n\
 -Description: Abseil ${_NAME} library\n\
 -URL: https://abseil.io/\n\
 -Version: ${PC_VERSION}\n\
 -Requires:${PC_DEPS}\n\
--Libs: -L\${libdir} $<JOIN:${ABSL_CC_LIB_LINKOPTS}, > $<$<NOT:$<BOOL:${ABSL_CC_LIB_IS_INTERFACE}>>:-labsl_${_NAME}>\n\
+-Libs: -L\${libdir} ${PC_LINKOPTS} $<$<NOT:$<BOOL:${ABSL_CC_LIB_IS_INTERFACE}>>:-labsl_${_NAME}>\n\
 -Cflags: -I\${includedir}${PC_CFLAGS}\n")
 -      INSTALL(FILES "${CMAKE_BINARY_DIR}/lib/pkgconfig/absl_${_NAME}.pc"
 -              DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
      endif()
    endif()
  
-@@ -224,6 +209,12 @@ Cflags: -I\${includedir}${PC_CFLAGS}\n")
+@@ -228,6 +213,12 @@ Cflags: -I\${includedir}${PC_CFLAGS}\n")
          ${ABSL_CC_LIB_LINKOPTS}
          ${ABSL_DEFAULT_LINKOPTS}
        )
@@ -59,10 +84,10 @@ index 62d246d0..4edd88c2 100644
  @PACKAGE_INIT@
  
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 3a73f707..4ba94d90 100644
+index 79869ff5..729bb917 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -95,7 +95,13 @@ endif()
+@@ -103,7 +103,13 @@ endif()
  
  # find dependencies
  ## pthread
@@ -75,9 +100,9 @@ index 3a73f707..4ba94d90 100644
 +  find_package(Threads REQUIRED)
 +endif()
  
- option(ABSL_USE_EXTERNAL_GOOGLETEST
-   "If ON, Abseil will assume that the targets for GoogleTest are already provided by the including project. This makes sense when Abseil is used with add_subproject." OFF)
-@@ -145,20 +151,21 @@ add_subdirectory(absl)
+ include(CMakeDependentOption)
+ 
+@@ -173,20 +179,21 @@ add_subdirectory(absl)
  
  if(ABSL_ENABLE_INSTALL)
    
@@ -103,7 +128,7 @@ index 3a73f707..4ba94d90 100644
    )
  
    # Abseil only has a version in LTS releases.  This mechanism is accomplished
-@@ -171,7 +178,7 @@ if(ABSL_ENABLE_INSTALL)
+@@ -199,7 +206,7 @@ if(ABSL_ENABLE_INSTALL)
      )
  
      install(FILES "${PROJECT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake"
@@ -113,7 +138,7 @@ index 3a73f707..4ba94d90 100644
    endif()  # absl_VERSION
  
 diff --git a/absl/CMakeLists.txt b/absl/CMakeLists.txt
-index a41e1eeb..93554181 100644
+index b1715846..06b3acbb 100644
 --- a/absl/CMakeLists.txt
 +++ b/absl/CMakeLists.txt
 @@ -19,7 +19,9 @@ add_subdirectory(algorithm)
@@ -127,41 +152,25 @@ index a41e1eeb..93554181 100644
  add_subdirectory(hash)
  add_subdirectory(memory)
 diff --git a/absl/base/CMakeLists.txt b/absl/base/CMakeLists.txt
-index 981b8cc0..9bc2f6a4 100644
+index ed55093a..d9aa9817 100644
 --- a/absl/base/CMakeLists.txt
 +++ b/absl/base/CMakeLists.txt
-@@ -573,6 +573,7 @@ absl_cc_test(
-     gmock_main
+@@ -534,6 +534,7 @@ absl_cc_test(
  )
  
+ # Internal-only target, do not depend on directly.
 +if(NOT(__COMPILER_PS4 OR __COMPILER_PS5))
  absl_cc_library(
    NAME
      scoped_set_env
-@@ -598,6 +599,7 @@ absl_cc_test(
+@@ -559,6 +560,7 @@ absl_cc_test(
      absl::scoped_set_env
-     gtest_main
+     GTest::gtest_main
  )
 +endif()
  
  absl_cc_test(
    NAME
-diff --git a/absl/base/internal/endian.h b/absl/base/internal/endian.h
-index dad0e9ae..f1a0c6c0 100644
---- a/absl/base/internal/endian.h
-+++ b/absl/base/internal/endian.h
-@@ -20,7 +20,11 @@
- #ifdef _MSC_VER
- #include <stdlib.h>  // NOLINT(build/include)
- #elif defined(__FreeBSD__)
-+#if defined(__ORBIS__) || defined(__PROSPERO__)
-+#include <machine/endian.h>
-+#else
- #include <sys/endian.h>
-+#endif
- #elif defined(__GLIBC__)
- #include <byteswap.h>  // IWYU pragma: export
- #endif
 diff --git a/absl/base/internal/low_level_alloc.cc b/absl/base/internal/low_level_alloc.cc
 index 229ab916..f3519a51 100644
 --- a/absl/base/internal/low_level_alloc.cc
@@ -271,20 +280,20 @@ index db91951c..2eb1d140 100644
  #endif
  
 diff --git a/absl/base/internal/raw_logging.cc b/absl/base/internal/raw_logging.cc
-index 074e026a..575005c6 100644
+index 54e71a3f..b93c3c71 100644
 --- a/absl/base/internal/raw_logging.cc
 +++ b/absl/base/internal/raw_logging.cc
-@@ -50,7 +50,7 @@
- // ABSL_HAVE_SYSCALL_WRITE is defined when the platform provides the syscall
+@@ -53,7 +53,7 @@
  //   syscall(SYS_write, /*int*/ fd, /*char* */ buf, /*size_t*/ len);
  // for low level operations that want to avoid libc.
--#if (defined(__linux__) || defined(__FreeBSD__)) && !defined(__ANDROID__)
-+#if (defined(__linux__) || defined(__FreeBSD__)) && !defined(__ANDROID__) && !defined(__ORBIS__) && !defined(__PROSPERO__)
+ #if (defined(__linux__) || defined(__FreeBSD__) || defined(__OpenBSD__)) && \
+-    !defined(__ANDROID__)
++    !defined(__ANDROID__) && !defined(__ORBIS__) && !defined(__PROSPERO__)
  #include <sys/syscall.h>
  #define ABSL_HAVE_SYSCALL_WRITE 1
  #define ABSL_LOW_LEVEL_WRITE_SUPPORTED 1
 diff --git a/absl/base/internal/sysinfo.cc b/absl/base/internal/sysinfo.cc
-index 4a3b2050..5279749f 100644
+index c8366df1..63204498 100644
 --- a/absl/base/internal/sysinfo.cc
 +++ b/absl/base/internal/sysinfo.cc
 @@ -30,7 +30,7 @@
@@ -297,22 +306,23 @@ index 4a3b2050..5279749f 100644
  #endif
  
 diff --git a/absl/base/internal/thread_identity.cc b/absl/base/internal/thread_identity.cc
-index 9950e63a..2a97860e 100644
+index 79853f09..eb534ac8 100644
 --- a/absl/base/internal/thread_identity.cc
 +++ b/absl/base/internal/thread_identity.cc
-@@ -16,7 +16,11 @@
+@@ -16,8 +16,12 @@
  
- #ifndef _WIN32
+ #if !defined(_WIN32) || defined(__MINGW32__)
  #include <pthread.h>
 +#if defined(__ORBIS__) || defined(__PROSPERO__)
 +#include <sys/signal.h>
 +#else
  #include <signal.h>
-+#endif 
  #endif
++#endif
  
  #include <atomic>
-@@ -78,7 +82,7 @@ void SetCurrentThreadIdentity(
+ #include <cassert>
+@@ -79,7 +83,7 @@ void SetCurrentThreadIdentity(
    absl::call_once(init_thread_identity_key_once, AllocateThreadIdentityKey,
                    reclaimer);
  
@@ -322,10 +332,10 @@ index 9950e63a..2a97860e 100644
    // See https://kripken.github.io/emscripten-site/docs/porting/pthreads.html
    // for more information.
 diff --git a/absl/debugging/CMakeLists.txt b/absl/debugging/CMakeLists.txt
-index 074b44cf..0a4a6ee4 100644
+index d8207d6a..df0eca77 100644
 --- a/absl/debugging/CMakeLists.txt
 +++ b/absl/debugging/CMakeLists.txt
-@@ -107,6 +107,7 @@ absl_cc_library(
+@@ -115,6 +115,7 @@ absl_cc_library(
      absl::raw_logging_internal
  )
  
@@ -333,16 +343,16 @@ index 074b44cf..0a4a6ee4 100644
  absl_cc_library(
    NAME
      failure_signal_handler
-@@ -143,6 +144,7 @@ absl_cc_test(
+@@ -150,6 +151,7 @@ absl_cc_test(
      Threads::Threads
-     gmock
+     GTest::gmock
  )
 +endif()
  
+ # Internal-only target, do not depend on directly.
  absl_cc_library(
-   NAME
 diff --git a/absl/debugging/failure_signal_handler.cc b/absl/debugging/failure_signal_handler.cc
-index 3ddebd74..c173b8d5 100644
+index affade3b..ed38842a 100644
 --- a/absl/debugging/failure_signal_handler.cc
 +++ b/absl/debugging/failure_signal_handler.cc
 @@ -36,7 +36,9 @@
@@ -356,10 +366,10 @@ index 3ddebd74..c173b8d5 100644
  #include <cstring>
  #include <ctime>
 diff --git a/absl/debugging/internal/examine_stack.cc b/absl/debugging/internal/examine_stack.cc
-index 589a3ef3..769dbeab 100644
+index 5bdd341e..2b2c152f 100644
 --- a/absl/debugging/internal/examine_stack.cc
 +++ b/absl/debugging/internal/examine_stack.cc
-@@ -24,7 +24,9 @@
+@@ -30,7 +30,9 @@
  #include <sys/ucontext.h>
  #endif
  
@@ -370,20 +380,18 @@ index 589a3ef3..769dbeab 100644
  
  #include "absl/base/attributes.h"
 diff --git a/absl/time/internal/cctz/src/time_zone_format.cc b/absl/time/internal/cctz/src/time_zone_format.cc
-index d8cb0474..cb3ecf15 100644
+index d8cb0474..ba1b1b24 100644
 --- a/absl/time/internal/cctz/src/time_zone_format.cc
 +++ b/absl/time/internal/cctz/src/time_zone_format.cc
-@@ -13,8 +13,8 @@
+@@ -13,7 +13,7 @@
  //   limitations under the License.
  
  #if !defined(HAS_STRPTIME)
 -#if !defined(_MSC_VER) && !defined(__MINGW32__)
--#define HAS_STRPTIME 1  // assume everyone has strptime() except windows
 +#if !defined(_MSC_VER) && !defined(__MINGW32__) && !defined(__ORBIS__) && !defined(__PROSPERO__)
-+#define HAS_STRPTIME 1  // assume everyone has strptime() except windows and playstation
+ #define HAS_STRPTIME 1  // assume everyone has strptime() except windows
  #endif
  #endif
- 
 @@ -40,7 +40,7 @@
  #include <limits>
  #include <string>
@@ -403,10 +411,10 @@ index d8cb0474..cb3ecf15 100644
  char* strptime(const char* s, const char* fmt, std::tm* tm) {
    std::istringstream input(s);
 diff --git a/absl/time/internal/cctz/src/time_zone_info.cc b/absl/time/internal/cctz/src/time_zone_info.cc
-index 8039353e..e4b974bb 100644
+index 4f175d95..683ade1f 100644
 --- a/absl/time/internal/cctz/src/time_zone_info.cc
 +++ b/absl/time/internal/cctz/src/time_zone_info.cc
-@@ -631,7 +631,7 @@ std::unique_ptr<ZoneInfoSource> FileZoneInfoSource::Open(
+@@ -636,7 +636,7 @@ std::unique_ptr<ZoneInfoSource> FileZoneInfoSource::Open(
      char* tzdir_env = nullptr;
  #if defined(_MSC_VER)
      _dupenv_s(&tzdir_env, nullptr, "TZDIR");
@@ -474,10 +482,10 @@ index 887dd097..06b5a63e 100644
    return localtime_r(timep, result);
  #endif
 diff --git a/absl/time/internal/cctz/src/time_zone_lookup.cc b/absl/time/internal/cctz/src/time_zone_lookup.cc
-index efdea64b..a15ce331 100644
+index 898d04c1..9f010e2e 100644
 --- a/absl/time/internal/cctz/src/time_zone_lookup.cc
 +++ b/absl/time/internal/cctz/src/time_zone_lookup.cc
-@@ -145,7 +145,7 @@ time_zone local_time_zone() {
+@@ -194,7 +194,7 @@ time_zone local_time_zone() {
    char* tz_env = nullptr;
  #if defined(_MSC_VER)
    _dupenv_s(&tz_env, nullptr, "TZ");
@@ -486,7 +494,7 @@ index efdea64b..a15ce331 100644
    tz_env = std::getenv("TZ");
  #endif
    if (tz_env) zone = tz_env;
-@@ -160,7 +160,7 @@ time_zone local_time_zone() {
+@@ -209,7 +209,7 @@ time_zone local_time_zone() {
  #if defined(_MSC_VER)
      // System-specific default is just "localtime".
      _dupenv_s(&localtime_env, nullptr, "LOCALTIME");
@@ -495,3 +503,6 @@ index efdea64b..a15ce331 100644
      zone = "/etc/localtime";  // System-specific default.
      localtime_env = std::getenv("LOCALTIME");
  #endif
+-- 
+2.39.0.windows.1
+
