@@ -1,9 +1,28 @@
-diff --git a/cmake/CMakeLists.txt b/cmake/CMakeLists.txt
-index 51e8478f6..48ceb7081 100644
---- a/cmake/CMakeLists.txt
-+++ b/cmake/CMakeLists.txt
-@@ -24,7 +24,8 @@ endif()
- project(protobuf C CXX)
+From e04521b9b517bf7036344ff4ba1dd096326f8273 Mon Sep 17 00:00:00 2001
+From: ZezhongWang <904192625@qq.com>
+Date: Thu, 19 Jan 2023 11:25:59 +0200
+Subject: [PATCH] changes from turbolink libraries for grpc 1.41.0
+
+---
+ CMakeLists.txt                                | 20 +++++++++---
+ cmake/install.cmake                           |  5 +++
+ src/google/protobuf/compiler/importer.cc      |  4 ++-
+ src/google/protobuf/descriptor.cc             |  3 +-
+ .../protobuf/generated_message_tctable_impl.h |  3 --
+ .../generated_message_tctable_lite.cc         |  5 ---
+ src/google/protobuf/inlined_string_field.h    |  2 +-
+ src/google/protobuf/io/io_win32.cc            | 32 ++++++++++++++++++-
+ src/google/protobuf/stubs/mutex.h             |  2 +-
+ src/google/protobuf/stubs/platform_macros.h   |  2 +-
+ src/google/protobuf/stubs/port.h              | 11 ++++++-
+ 11 files changed, 68 insertions(+), 21 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 04cb3303a..0f3d49f76 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -33,7 +33,8 @@ if(protobuf_DEPRECATED_CMAKE_SUBDIRECTORY_USAGE)
+ endif()
  
  # Add c++11 flags
 -if (CYGWIN)
@@ -12,9 +31,9 @@ index 51e8478f6..48ceb7081 100644
    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11")
  else()
    set(CMAKE_CXX_STANDARD 11)
-@@ -126,7 +127,9 @@ if (protobuf_DISABLE_RTTI)
-   add_definitions(-DGOOGLE_PROTOBUF_NO_RTTI=1)
+@@ -160,7 +161,9 @@ else()
  endif()
+ file(REMOVE ${CMAKE_CURRENT_BINARY_DIR}/cmaketest.map)
  
 -find_package(Threads REQUIRED)
 +if(NOT (__COMPILER_PS4 OR __COMPILER_PS5))
@@ -23,7 +42,7 @@ index 51e8478f6..48ceb7081 100644
  
  set(_protobuf_FIND_ZLIB)
  if (protobuf_WITH_ZLIB)
-@@ -160,7 +163,9 @@ set(protobuf_LINK_LIBATOMIC false)
+@@ -194,7 +197,9 @@ set(protobuf_LINK_LIBATOMIC false)
  if (NOT MSVC)
    include(CheckCXXSourceCompiles)
    set(OLD_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
@@ -34,30 +53,32 @@ index 51e8478f6..48ceb7081 100644
    check_cxx_source_compiles("
      #include <atomic>
      int main() {
-@@ -182,7 +187,9 @@ else (protobuf_BUILD_SHARED_LIBS)
-   # making programmatic control difficult.  Prefer the functionality in newer
+@@ -217,9 +222,9 @@ else (protobuf_BUILD_SHARED_LIBS)
    # CMake versions when available.
-   if(CMAKE_VERSION VERSION_GREATER 3.15 OR CMAKE_VERSION VERSION_EQUAL 3.15)
--    set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded$<$<CONFIG:Debug>:Debug>)
-+    if (MSVC AND protobuf_MSVC_STATIC_RUNTIME)
-+      set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded$<$<CONFIG:Debug>:Debug>)
-+    endif (MSVC AND protobuf_MSVC_STATIC_RUNTIME)
+   if(${CMAKE_VERSION} VERSION_GREATER 3.15 OR ${CMAKE_VERSION} VERSION_EQUAL 3.15)
+     if (protobuf_MSVC_STATIC_RUNTIME)
+-        set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded$<$<CONFIG:Debug>:Debug>)
++        set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
+     else()
+-        set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded$<$<CONFIG:Debug>:Debug>DLL)
++        set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDLL)
+     endif()
    else()
      # In case we are building static libraries, link also the runtime library statically
-     # so that MSVCR*.DLL is not required at runtime.
-@@ -247,6 +254,10 @@ if (MSVC)
-   configure_file(version.rc.in ${CMAKE_CURRENT_BINARY_DIR}/version.rc @ONLY)
+@@ -295,6 +300,11 @@ else (MSVC)
+   set(LIB_PREFIX)
  endif (MSVC)
  
 +if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 +  # Clang warning suppressions
 +  add_definitions(-Wall -Werror -Wno-deprecated-register)
 +endif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
- 
- get_filename_component(protobuf_source_dir ${protobuf_SOURCE_DIR} PATH)
- 
++
+ include_directories(
+   ${ZLIB_INCLUDE_DIRECTORIES}
+   ${protobuf_BINARY_DIR}
 diff --git a/cmake/install.cmake b/cmake/install.cmake
-index 4e1c5deb3..a209c19df 100644
+index 825cb25fc..312db2c5e 100644
 --- a/cmake/install.cmake
 +++ b/cmake/install.cmake
 @@ -26,6 +26,11 @@ foreach(_library ${_protobuf_libraries})
@@ -73,7 +94,7 @@ index 4e1c5deb3..a209c19df 100644
  
  if (protobuf_BUILD_PROTOC_BINARIES)
 diff --git a/src/google/protobuf/compiler/importer.cc b/src/google/protobuf/compiler/importer.cc
-index 3bcb0c90c..bb5207a20 100644
+index f1e26f8bd..c0e74e955 100644
 --- a/src/google/protobuf/compiler/importer.cc
 +++ b/src/google/protobuf/compiler/importer.cc
 @@ -417,8 +417,10 @@ DiskSourceTree::DiskFileToVirtualFile(const std::string& disk_file,
@@ -89,12 +110,12 @@ index 3bcb0c90c..bb5207a20 100644
        }
      }
 diff --git a/src/google/protobuf/descriptor.cc b/src/google/protobuf/descriptor.cc
-index c8ce218a9..edca26843 100644
+index 5f3427dc7..ca86d7ad2 100644
 --- a/src/google/protobuf/descriptor.cc
 +++ b/src/google/protobuf/descriptor.cc
-@@ -7902,8 +7902,7 @@ void FieldDescriptor::InternalTypeOnceInit() const {
+@@ -8212,8 +8212,7 @@ void FieldDescriptor::InternalTypeOnceInit() const {
        } else {
-         name = lazy_default_value_enum_name_;
+         name = lazy_default_value_enum_name;
        }
 -      Symbol result = file()->pool()->CrossLinkOnDemandHelper(name, true);
 -      default_value_enum_ = result.enum_value_descriptor();
@@ -103,10 +124,10 @@ index c8ce218a9..edca26843 100644
        default_value_enum_ = nullptr;
      }
 diff --git a/src/google/protobuf/generated_message_tctable_impl.h b/src/google/protobuf/generated_message_tctable_impl.h
-index 3f2b1cabd..86d743002 100644
+index 21fa5332d..f7a7773bc 100644
 --- a/src/google/protobuf/generated_message_tctable_impl.h
 +++ b/src/google/protobuf/generated_message_tctable_impl.h
-@@ -95,9 +95,6 @@ namespace internal {
+@@ -248,9 +248,6 @@ enum FieldType : uint16_t {
  
  #ifndef NDEBUG
  template <size_t align>
@@ -116,37 +137,37 @@ index 3f2b1cabd..86d743002 100644
  void AlignFail(uintptr_t address) {
    GOOGLE_LOG(FATAL) << "Unaligned (" << align << ") access at " << address;
  }
+diff --git a/src/google/protobuf/generated_message_tctable_lite.cc b/src/google/protobuf/generated_message_tctable_lite.cc
+index 9993811dc..d80006af7 100644
+--- a/src/google/protobuf/generated_message_tctable_lite.cc
++++ b/src/google/protobuf/generated_message_tctable_lite.cc
+@@ -343,11 +343,6 @@ const char* TcParser::MiniParse(PROTOBUF_TC_PARAM_DECL) {
+ 
+ namespace {
+ 
+-// Offset returns the address `offset` bytes after `base`.
+-inline void* Offset(void* base, uint32_t offset) {
+-  return static_cast<uint8_t*>(base) + offset;
+-}
+-
+ // InvertPacked changes tag bits from the given wire type to length
+ // delimited. This is the difference expected between packed and non-packed
+ // repeated fields.
 diff --git a/src/google/protobuf/inlined_string_field.h b/src/google/protobuf/inlined_string_field.h
-index 1fe639f06..e4ab35972 100644
+index 79e37d414..71bd6a7eb 100644
 --- a/src/google/protobuf/inlined_string_field.h
 +++ b/src/google/protobuf/inlined_string_field.h
-@@ -347,7 +347,7 @@ inline void InlinedStringField::Swap(
-     InlinedStringField* from, const std::string* /*default_value*/,
-     Arena* arena, bool donated, bool from_donated, uint32_t* donating_states,
-     uint32_t* from_donating_states, uint32_t mask) {
+@@ -427,7 +427,7 @@ inline PROTOBUF_NDEBUG_INLINE void InlinedStringField::InternalSwap(
+     MessageLite* lhs_msg,  //
+     InlinedStringField* rhs, Arena* rhs_arena, bool rhs_arena_dtor_registered,
+     MessageLite* rhs_msg) {
 -#if GOOGLE_PROTOBUF_INTERNAL_DONATE_STEAL_INLINE
 +#ifdef GOOGLE_PROTOBUF_INTERNAL_DONATE_STEAL_INLINE
-   // If one is donated and the other is not, undonate the donated one.
-   if (donated && !from_donated) {
-     MutableSlow(arena, donated, donating_states, mask);
-diff --git a/src/google/protobuf/io/coded_stream.h b/src/google/protobuf/io/coded_stream.h
-index 45963ef86..8af9e66e3 100644
---- a/src/google/protobuf/io/coded_stream.h
-+++ b/src/google/protobuf/io/coded_stream.h
-@@ -135,7 +135,11 @@
- #ifdef __APPLE__
- #include <machine/endian.h>  // __BYTE_ORDER
- #elif defined(__FreeBSD__)
-+#if defined(__ORBIS__) || defined(__PROSPERO__)
-+#include <machine/endian.h>  // __BYTE_ORDER
-+#else
- #include <sys/endian.h>  // __BYTE_ORDER
-+#endif
- #elif (defined(sun) || defined(__sun)) && (defined(__SVR4) || defined(__svr4__))
- #include <sys/isa_defs.h>  // __BYTE_ORDER
- #elif defined(_AIX) || defined(__TOS_AIX__)
+   lhs->get_mutable()->swap(*rhs->get_mutable());
+   if (!lhs_arena_dtor_registered && rhs_arena_dtor_registered) {
+     lhs_msg->OnDemandRegisterArenaDtor(lhs_arena);
 diff --git a/src/google/protobuf/io/io_win32.cc b/src/google/protobuf/io/io_win32.cc
-index ed8ab1973..4f75fc2fd 100644
+index 4e8190880..bbffe230f 100644
 --- a/src/google/protobuf/io/io_win32.cc
 +++ b/src/google/protobuf/io/io_win32.cc
 @@ -42,8 +42,37 @@
@@ -188,46 +209,12 @@ index ed8ab1973..4f75fc2fd 100644
  // Comment this out to fall back to using the ANSI versions (open, mkdir, ...)
  // instead of the Unicode ones (_wopen, _wmkdir, ...). Doing so can be useful to
  // debug failing tests if that's caused by the long path support.
-@@ -467,4 +496,5 @@ bool wcs_to_utf8(const wchar_t* input, string* out) {
+@@ -468,4 +497,5 @@ bool wcs_to_utf8(const wchar_t* input, string* out) {
  }  // namespace protobuf
  }  // namespace google
  
 +#endif  // defined(_XBOX_ONE)
  #endif  // defined(_WIN32)
-diff --git a/src/google/protobuf/port_def.inc b/src/google/protobuf/port_def.inc
-index 003f75ac7..ff33eae6f 100644
---- a/src/google/protobuf/port_def.inc
-+++ b/src/google/protobuf/port_def.inc
-@@ -617,7 +617,7 @@
- #ifdef PROTOBUF_PRAGMA_INIT_SEG
- #error PROTOBUF_PRAGMA_INIT_SEG was previously defined
- #endif
--#if _MSC_VER
-+#ifdef _MSC_VER
- #define PROTOBUF_PRAGMA_INIT_SEG __pragma(init_seg(lib))
- #else
- #define PROTOBUF_PRAGMA_INIT_SEG
-@@ -784,7 +784,7 @@
- #endif
- 
- // Silence some MSVC warnings in all our code.
--#if _MSC_VER
-+#if defined(_MSC_VER)
- #pragma warning(push)
- // For non-trivial unions
- #pragma warning(disable : 4582)
-diff --git a/src/google/protobuf/port_undef.inc b/src/google/protobuf/port_undef.inc
-index 579eb419d..2f5b0bb7f 100644
---- a/src/google/protobuf/port_undef.inc
-+++ b/src/google/protobuf/port_undef.inc
-@@ -140,6 +140,6 @@
- #endif
- 
- // Pop the warning(push) from port_def.inc
--#if _MSC_VER
-+#if defined(_MSC_VER)
- #pragma warning(pop)
- #endif
 diff --git a/src/google/protobuf/stubs/mutex.h b/src/google/protobuf/stubs/mutex.h
 index c4599913b..ba60d02e9 100644
 --- a/src/google/protobuf/stubs/mutex.h
@@ -255,7 +242,7 @@ index 24799600d..f4a6878d9 100644
  // we use pthread_key_create()/pthread_getspecific()/... methods for
  // TLS support on android.
 diff --git a/src/google/protobuf/stubs/port.h b/src/google/protobuf/stubs/port.h
-index 045e25d89..fae51d9b3 100644
+index b074cb163..0538e9176 100644
 --- a/src/google/protobuf/stubs/port.h
 +++ b/src/google/protobuf/stubs/port.h
 @@ -60,7 +60,11 @@
@@ -285,18 +272,6 @@ index 045e25d89..fae51d9b3 100644
  #endif
  
  // Legacy: some users reference these (internal-only) macros even though we
-diff --git a/src/google/protobuf/util/time_util.h b/src/google/protobuf/util/time_util.h
-index 96b1aac46..bbfc4c27c 100644
---- a/src/google/protobuf/util/time_util.h
-+++ b/src/google/protobuf/util/time_util.h
-@@ -40,8 +40,8 @@
- #ifdef _MSC_VER
- #ifdef _XBOX_ONE
- struct timeval {
--  int64 tv_sec;  /* seconds */
--  int64 tv_usec; /* and microseconds */
-+  int64_t tv_sec;  /* seconds */
-+  int64_t tv_usec; /* and microseconds */
- };
- #else
- #include <winsock2.h>
+-- 
+2.39.0.windows.1
+

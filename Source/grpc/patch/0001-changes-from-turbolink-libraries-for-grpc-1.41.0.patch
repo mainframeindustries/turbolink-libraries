@@ -1,8 +1,37 @@
+From da16db309e2544ae473a019a9ddf570281ae5e4b Mon Sep 17 00:00:00 2001
+From: ZezhongWang <904192625@qq.com>
+Date: Wed, 18 Jan 2023 18:39:02 +0200
+Subject: [PATCH] changes from turbolink libraries for grpc 1.41.0
+
+---
+ CMakeLists.txt                                | 45 +++++++---
+ include/grpc/event_engine/port.h              |  4 +-
+ include/grpc/impl/codegen/port_platform.h     | 25 +++++-
+ src/core/lib/gpr/cpu_posix.cc                 |  4 +
+ src/core/lib/gpr/log_posix.cc                 |  4 +
+ src/core/lib/gpr/tmpfile.h                    |  2 +
+ src/core/lib/gpr/tmpfile_posix.cc             |  3 +-
+ src/core/lib/gprpp/env_posix.cc               | 12 +++
+ src/core/lib/gprpp/thd_posix.cc               |  8 ++
+ src/core/lib/iomgr/endpoint_pair_posix.cc     |  7 +-
+ src/core/lib/iomgr/ev_epoll1_linux.cc         | 24 ++++++
+ src/core/lib/iomgr/ev_posix.cc                |  2 +
+ src/core/lib/iomgr/ev_posix.h                 |  4 +
+ src/core/lib/iomgr/internal_errqueue.cc       |  2 +
+ src/core/lib/iomgr/port.h                     | 14 ++++
+ src/core/lib/iomgr/sockaddr_posix.h           |  2 +
+ .../lib/iomgr/socket_utils_common_posix.cc    |  8 +-
+ src/core/lib/iomgr/tcp_client_posix.cc        |  2 +
+ .../iomgr/tcp_server_utils_posix_common.cc    |  5 ++
+ src/core/lib/iomgr/wakeup_fd_pipe.cc          | 82 +++++++++++++++++++
+ .../address_sorting_internal.h                |  3 +
+ 21 files changed, 240 insertions(+), 22 deletions(-)
+
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 0e8fbdee8b..fc44bb9124 100644
+index 7052846e66..49a779fec1 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -48,6 +48,7 @@ option(gRPC_BUILD_TESTS "Build tests" OFF)
+@@ -49,6 +49,7 @@ option(gRPC_BUILD_TESTS "Build tests" OFF)
  option(gRPC_BUILD_CODEGEN "Build codegen" ON)
  option(gRPC_BUILD_CSHARP_EXT "Build C# extensions" ON)
  option(gRPC_BACKWARDS_COMPATIBILITY_MODE "Build libraries that are binary compatible across a larger number of OS and libc versions" OFF)
@@ -10,8 +39,8 @@ index 0e8fbdee8b..fc44bb9124 100644
  
  set(gRPC_INSTALL_default ON)
  if(NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-@@ -254,10 +255,16 @@ if (gRPC_XDS_USER_AGENT_IS_CSHARP)
-   add_definitions("-DGRPC_XDS_USER_AGENT_NAME_SUFFIX=\"csharp\"" "-DGRPC_XDS_USER_AGENT_VERSION_SUFFIX=\"2.41.0\"")
+@@ -302,6 +303,13 @@ if (gRPC_XDS_USER_AGENT_IS_CSHARP)
+   add_definitions("-DGRPC_XDS_USER_AGENT_NAME_SUFFIX=\"csharp\"" "-DGRPC_XDS_USER_AGENT_VERSION_SUFFIX=\"2.50.0\"")
  endif()
  
 +if (gRPC_USE_CARES)
@@ -21,6 +50,10 @@ index 0e8fbdee8b..fc44bb9124 100644
 + add_definitions("-DGRPC_ARES=0")
 +endif()
 +
+ if(UNIX AND NOT HAIKU)
+   # -pthread does more than -lpthread
+   set(THREADS_PREFER_PTHREAD_FLAG ON)
+@@ -318,7 +326,6 @@ include(cmake/ccache.cmake)
  include(cmake/abseil-cpp.cmake)
  include(cmake/address_sorting.cmake)
  include(cmake/benchmark.cmake)
@@ -28,7 +61,7 @@ index 0e8fbdee8b..fc44bb9124 100644
  include(cmake/protobuf.cmake)
  include(cmake/re2.cmake)
  include(cmake/ssl.cmake)
-@@ -1063,8 +1070,9 @@ if(WIN32 AND MSVC)
+@@ -1309,8 +1316,9 @@ if(WIN32 AND MSVC)
      COMPILE_PDB_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
    )
    if(gRPC_INSTALL)
@@ -39,29 +72,7 @@ index 0e8fbdee8b..fc44bb9124 100644
      )
    endif()
  endif()
-@@ -1212,8 +1220,9 @@ if(WIN32 AND MSVC)
-     COMPILE_PDB_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
-   )
-   if(gRPC_INSTALL)
--    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/end2end_nosec_tests.pdb
-+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Debug/end2end_nosec_tests.pdb
-       DESTINATION ${gRPC_INSTALL_LIBDIR} OPTIONAL
-+      CONFIGURATION Debug
-     )
-   endif()
- endif()
-@@ -1360,8 +1369,9 @@ if(WIN32 AND MSVC)
-     COMPILE_PDB_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
-   )
-   if(gRPC_INSTALL)
--    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/end2end_tests.pdb
-+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Debug/end2end_tests.pdb
-       DESTINATION ${gRPC_INSTALL_LIBDIR} OPTIONAL
-+      CONFIGURATIONS Debug
-     )
-   endif()
- endif()
-@@ -1456,8 +1466,9 @@ if(WIN32 AND MSVC)
+@@ -1581,8 +1589,9 @@ if(WIN32 AND MSVC)
      COMPILE_PDB_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
    )
    if(gRPC_INSTALL)
@@ -72,7 +83,7 @@ index 0e8fbdee8b..fc44bb9124 100644
      )
    endif()
  endif()
-@@ -2133,8 +2144,9 @@ if(WIN32 AND MSVC)
+@@ -2377,8 +2386,9 @@ if(WIN32 AND MSVC)
      COMPILE_PDB_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
    )
    if(gRPC_INSTALL)
@@ -83,7 +94,7 @@ index 0e8fbdee8b..fc44bb9124 100644
      )
    endif()
  endif()
-@@ -2686,8 +2698,9 @@ if(WIN32 AND MSVC)
+@@ -2922,8 +2932,9 @@ if(WIN32 AND MSVC)
      COMPILE_PDB_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
    )
    if(gRPC_INSTALL)
@@ -94,7 +105,7 @@ index 0e8fbdee8b..fc44bb9124 100644
      )
    endif()
  endif()
-@@ -2890,8 +2903,9 @@ if(WIN32 AND MSVC)
+@@ -3182,8 +3193,9 @@ if(WIN32 AND MSVC)
      COMPILE_PDB_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
    )
    if(gRPC_INSTALL)
@@ -105,7 +116,7 @@ index 0e8fbdee8b..fc44bb9124 100644
      )
    endif()
  endif()
-@@ -3137,8 +3151,9 @@ if(WIN32 AND MSVC)
+@@ -3438,8 +3450,9 @@ if(WIN32 AND MSVC)
      COMPILE_PDB_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
    )
    if(gRPC_INSTALL)
@@ -116,7 +127,7 @@ index 0e8fbdee8b..fc44bb9124 100644
      )
    endif()
  endif()
-@@ -3199,8 +3214,9 @@ if(WIN32 AND MSVC)
+@@ -3501,8 +3514,9 @@ if(WIN32 AND MSVC)
      COMPILE_PDB_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
    )
    if(gRPC_INSTALL)
@@ -127,7 +138,7 @@ index 0e8fbdee8b..fc44bb9124 100644
      )
    endif()
  endif()
-@@ -3266,8 +3282,9 @@ if(WIN32 AND MSVC)
+@@ -3569,8 +3583,9 @@ if(WIN32 AND MSVC)
      COMPILE_PDB_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
    )
    if(gRPC_INSTALL)
@@ -138,7 +149,7 @@ index 0e8fbdee8b..fc44bb9124 100644
      )
    endif()
  endif()
-@@ -3539,8 +3556,9 @@ if(WIN32 AND MSVC)
+@@ -3856,8 +3871,9 @@ if(WIN32 AND MSVC)
      COMPILE_PDB_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
    )
    if(gRPC_INSTALL)
@@ -149,7 +160,7 @@ index 0e8fbdee8b..fc44bb9124 100644
      )
    endif()
  endif()
-@@ -3790,8 +3808,9 @@ if(WIN32 AND MSVC)
+@@ -4112,8 +4128,9 @@ if(WIN32 AND MSVC)
      COMPILE_PDB_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
    )
    if(gRPC_INSTALL)
@@ -160,7 +171,7 @@ index 0e8fbdee8b..fc44bb9124 100644
      )
    endif()
  endif()
-@@ -3859,8 +3878,9 @@ if(WIN32 AND MSVC)
+@@ -4182,8 +4199,9 @@ if(WIN32 AND MSVC)
      COMPILE_PDB_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
    )
    if(gRPC_INSTALL)
@@ -171,7 +182,7 @@ index 0e8fbdee8b..fc44bb9124 100644
      )
    endif()
  endif()
-@@ -3934,8 +3954,9 @@ if(WIN32 AND MSVC)
+@@ -4269,8 +4287,9 @@ if(WIN32 AND MSVC)
      COMPILE_PDB_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
    )
    if(gRPC_INSTALL)
@@ -182,42 +193,16 @@ index 0e8fbdee8b..fc44bb9124 100644
      )
    endif()
  endif()
-@@ -3968,6 +3989,7 @@ if(gRPC_INSTALL)
- endif()
- 
- 
-+if(gRPC_BUILD_CODEGEN)
- 
- add_executable(check_epollexclusive
-   test/build/check_epollexclusive.c
-@@ -4020,7 +4042,7 @@ target_link_libraries(gen_hpack_tables
-   grpc
-   gpr
- )
--
-+endif() #gRPC_BUILD_CODEGEN
- 
- if(gRPC_BUILD_TESTS)
- 
-@@ -17646,7 +17668,7 @@ function(generate_pkgconfig name description version requires
-     "${output_filepath}"
-     @ONLY)
-   install(FILES "${output_filepath}"
--    DESTINATION "lib/pkgconfig/")
-+    DESTINATION "${gRPC_INSTALL_LIBDIR}/pkgconfig/")
- endfunction()
- 
- # gpr .pc file
 diff --git a/include/grpc/event_engine/port.h b/include/grpc/event_engine/port.h
-index 942458646a..34479717fe 100644
+index 3055a667e0..613f8920c5 100644
 --- a/include/grpc/event_engine/port.h
 +++ b/include/grpc/event_engine/port.h
 @@ -20,10 +20,12 @@
  #if defined(GPR_ANDROID) || defined(GPR_LINUX) || defined(GPR_APPLE) ||     \
      defined(GPR_FREEBSD) || defined(GPR_OPENBSD) || defined(GPR_SOLARIS) || \
      defined(GPR_AIX) || defined(GPR_NACL) || defined(GPR_FUCHSIA) ||        \
--    defined(GRPC_POSIX_SOCKET)
-+    defined(GRPC_POSIX_SOCKET) || defined(GPR_PLAYSTATION)
+-    defined(GRPC_POSIX_SOCKET) || defined(GPR_NETBSD)
++    defined(GRPC_POSIX_SOCKET) || defined(GPR_NETBSD) || defined(GPR_PLAYSTATION)
  #define GRPC_EVENT_ENGINE_POSIX
  #include <arpa/inet.h>
 +#if !defined(GPR_PLAYSTATION)
@@ -227,10 +212,10 @@ index 942458646a..34479717fe 100644
  #include <sys/socket.h>
  #include <unistd.h>
 diff --git a/include/grpc/impl/codegen/port_platform.h b/include/grpc/impl/codegen/port_platform.h
-index 8b9831bae3..5eaa632278 100644
+index ec8217a345..8139e9fc88 100644
 --- a/include/grpc/impl/codegen/port_platform.h
 +++ b/include/grpc/impl/codegen/port_platform.h
-@@ -250,6 +250,29 @@
+@@ -257,6 +257,29 @@
  #else /* _LP64 */
  #define GPR_ARCH_32 1
  #endif /* _LP64 */
@@ -260,32 +245,17 @@ index 8b9831bae3..5eaa632278 100644
  #elif defined(__FreeBSD__)
  #define GPR_PLATFORM_STRING "freebsd"
  #ifndef _BSD_SOURCE
-@@ -536,7 +559,7 @@ typedef unsigned __int64 uint64_t;
+@@ -630,7 +653,7 @@ typedef unsigned __int64 uint64_t;
+ #define GPR_ATTRIBUTE_NORETURN
  #endif
- #endif /* GPR_PRINT_FORMAT_CHECK */
  
 -#if GPR_FORBID_UNREACHABLE_CODE
 +#ifdef GPR_FORBID_UNREACHABLE_CODE
  #define GPR_UNREACHABLE_CODE(STATEMENT)
  #else
- #define GPR_UNREACHABLE_CODE(STATEMENT)             \
-diff --git a/src/core/lib/address_utils/parse_address.cc b/src/core/lib/address_utils/parse_address.cc
-index a621514414..ae43df9dfb 100644
---- a/src/core/lib/address_utils/parse_address.cc
-+++ b/src/core/lib/address_utils/parse_address.cc
-@@ -27,8 +27,10 @@
- #endif
- #ifdef GRPC_POSIX_SOCKET
- #include <errno.h>
-+#if !defined(GPR_PLAYSTATION)
- #include <net/if.h>
- #endif
-+#endif
- 
- #include "absl/strings/str_cat.h"
- #include "absl/strings/strip.h"
+ #ifdef __cplusplus
 diff --git a/src/core/lib/gpr/cpu_posix.cc b/src/core/lib/gpr/cpu_posix.cc
-index 982ccbd6ff..69a1aca9c5 100644
+index 7a1d546059..53d703c748 100644
 --- a/src/core/lib/gpr/cpu_posix.cc
 +++ b/src/core/lib/gpr/cpu_posix.cc
 @@ -36,11 +36,15 @@ static long ncpus = 0;
@@ -304,41 +274,6 @@ index 982ccbd6ff..69a1aca9c5 100644
  }
  
  unsigned gpr_cpu_num_cores(void) {
-diff --git a/src/core/lib/gpr/env_posix.cc b/src/core/lib/gpr/env_posix.cc
-index fb2a21c669..2930ebd71b 100644
---- a/src/core/lib/gpr/env_posix.cc
-+++ b/src/core/lib/gpr/env_posix.cc
-@@ -29,18 +29,30 @@
- #include "src/core/lib/gpr/string.h"
- 
- char* gpr_getenv(const char* name) {
-+#if defined(GPR_PLAYSTATION)
-+  return nullptr;
-+#else
-   char* result = getenv(name);
-   return result == nullptr ? result : gpr_strdup(result);
-+#endif
- }
- 
- void gpr_setenv(const char* name, const char* value) {
-+#if defined(GPR_PLAYSTATION)
-+  (void)0;
-+#else
-   int res = setenv(name, value, 1);
-   GPR_ASSERT(res == 0);
-+#endif
- }
- 
- void gpr_unsetenv(const char* name) {
-+#if defined(GPR_PLAYSTATION)
-+  (void)0;
-+#else
-   int res = unsetenv(name);
-   GPR_ASSERT(res == 0);
-+#endif
- }
- 
- #endif /* GPR_POSIX_ENV */
 diff --git a/src/core/lib/gpr/log_posix.cc b/src/core/lib/gpr/log_posix.cc
 index 2c28bddd75..3648ff8eef 100644
 --- a/src/core/lib/gpr/log_posix.cc
@@ -391,11 +326,47 @@ index 166cdf68f2..90d82d6211 100644
 -
 +#endif
  #endif /* GPR_POSIX_TMPFILE */
+diff --git a/src/core/lib/gprpp/env_posix.cc b/src/core/lib/gprpp/env_posix.cc
+index fc85a77800..d507c0ba3b 100644
+--- a/src/core/lib/gprpp/env_posix.cc
++++ b/src/core/lib/gprpp/env_posix.cc
+@@ -27,19 +27,31 @@
+ namespace grpc_core {
+ 
+ absl::optional<std::string> GetEnv(const char* name) {
++#if defined(GPR_PLAYSTATION)
++  return nullptr;
++#else
+   char* result = getenv(name);
+   if (result == nullptr) return absl::nullopt;
+   return result;
++#endif
+ }
+ 
+ void SetEnv(const char* name, const char* value) {
++#if defined(GPR_PLAYSTATION)
++  (void)0;
++#else
+   int res = setenv(name, value, 1);
+   if (res != 0) abort();
++#endif
+ }
+ 
+ void UnsetEnv(const char* name) {
++#if defined(GPR_PLAYSTATION)
++  (void)0;
++#else
+   int res = unsetenv(name);
+   if (res != 0) abort();
++#endif
+ }
+ 
+ }  // namespace grpc_core
 diff --git a/src/core/lib/gprpp/thd_posix.cc b/src/core/lib/gprpp/thd_posix.cc
-index 2d522c9b23..2fc6b70a11 100644
+index e8963a1d34..eed00935f5 100644
 --- a/src/core/lib/gprpp/thd_posix.cc
 +++ b/src/core/lib/gprpp/thd_posix.cc
-@@ -52,14 +52,22 @@ struct thd_arg {
+@@ -54,14 +54,22 @@ struct thd_arg {
  size_t RoundUpToPageSize(size_t size) {
    // TODO(yunjiaw): Change this variable (page_size) to a function-level static
    // when possible
@@ -419,11 +390,11 @@ index 2d522c9b23..2fc6b70a11 100644
      request_size = min_stacksize;
    }
 diff --git a/src/core/lib/iomgr/endpoint_pair_posix.cc b/src/core/lib/iomgr/endpoint_pair_posix.cc
-index 217ea3770f..66d46e52e5 100644
+index cc721015fd..c402e7f616 100644
 --- a/src/core/lib/iomgr/endpoint_pair_posix.cc
 +++ b/src/core/lib/iomgr/endpoint_pair_posix.cc
-@@ -42,12 +42,9 @@
- #include "src/core/lib/iomgr/unix_sockets_posix.h"
+@@ -44,12 +44,9 @@
+ #include "src/core/lib/resource_quota/api.h"
  
  static void create_sockets(int sv[2]) {
 -  int flags;
@@ -438,7 +409,7 @@ index 217ea3770f..66d46e52e5 100644
    GPR_ASSERT(grpc_set_socket_no_sigpipe_if_possible(sv[1]) == GRPC_ERROR_NONE);
  }
 diff --git a/src/core/lib/iomgr/ev_epoll1_linux.cc b/src/core/lib/iomgr/ev_epoll1_linux.cc
-index 91805634a5..e8e37d3ee1 100644
+index 2bb095a416..0bd0a415d8 100644
 --- a/src/core/lib/iomgr/ev_epoll1_linux.cc
 +++ b/src/core/lib/iomgr/ev_epoll1_linux.cc
 @@ -29,10 +29,28 @@
@@ -470,7 +441,7 @@ index 91805634a5..e8e37d3ee1 100644
  #include <sys/socket.h>
  #include <unistd.h>
  
-@@ -100,12 +118,18 @@ static int epoll_create_and_cloexec() {
+@@ -99,12 +117,18 @@ static int epoll_create_and_cloexec() {
      gpr_log(GPR_ERROR, "epoll_create1 unavailable");
    }
  #else
@@ -490,10 +461,10 @@ index 91805634a5..e8e37d3ee1 100644
  #endif
    return fd;
 diff --git a/src/core/lib/iomgr/ev_posix.cc b/src/core/lib/iomgr/ev_posix.cc
-index bae0f15ce0..1765843f36 100644
+index da3e0db365..b2cf725923 100644
 --- a/src/core/lib/iomgr/ev_posix.cc
 +++ b/src/core/lib/iomgr/ev_posix.cc
-@@ -61,6 +61,7 @@ grpc_core::DebugOnlyTraceFlag grpc_polling_api_trace(false, "polling_api");
+@@ -62,6 +62,7 @@ grpc_core::DebugOnlyTraceFlag grpc_polling_api_trace(false, "polling_api");
  #define GRPC_POLLING_API_TRACE(...)
  #endif  // NDEBUG
  
@@ -501,7 +472,7 @@ index bae0f15ce0..1765843f36 100644
  /** Default poll() function - a pointer so that it can be overridden by some
   *  tests */
  #ifndef GPR_AIX
-@@ -71,6 +72,7 @@ int aix_poll(struct pollfd fds[], nfds_t nfds, int timeout) {
+@@ -72,6 +73,7 @@ int aix_poll(struct pollfd fds[], nfds_t nfds, int timeout) {
  }
  grpc_poll_function_type grpc_poll_function = aix_poll;
  #endif  // GPR_AIX
@@ -509,39 +480,8 @@ index bae0f15ce0..1765843f36 100644
  
  grpc_wakeup_fd grpc_global_wakeup_fd;
  
-@@ -84,6 +86,8 @@ struct event_engine_factory {
-   const char* name;
-   event_engine_factory_fn factory;
- };
-+
-+#if !defined(GPR_PLAYSTATION)
- namespace {
- 
- grpc_poll_function_type real_poll_function;
-@@ -110,6 +114,7 @@ const grpc_event_engine_vtable* init_non_polling(bool explicit_request) {
-   return ret;
- }
- }  // namespace
-+#endif
- 
- #define ENGINE_HEAD_CUSTOM "head_custom"
- #define ENGINE_TAIL_CUSTOM "tail_custom"
-@@ -128,8 +133,13 @@ const grpc_event_engine_vtable* init_non_polling(bool explicit_request) {
- static event_engine_factory g_factories[] = {
-     {ENGINE_HEAD_CUSTOM, nullptr},        {ENGINE_HEAD_CUSTOM, nullptr},
-     {ENGINE_HEAD_CUSTOM, nullptr},        {ENGINE_HEAD_CUSTOM, nullptr},
-+#if defined(GPR_PLAYSTATION)
-+    {ENGINE_HEAD_CUSTOM, nullptr},        {"epoll1", grpc_init_epoll1_linux},
-+    {ENGINE_HEAD_CUSTOM, nullptr},        {ENGINE_HEAD_CUSTOM, nullptr},
-+#else
-     {"epollex", grpc_init_epollex_linux}, {"epoll1", grpc_init_epoll1_linux},
-     {"poll", grpc_init_poll_posix},       {"none", init_non_polling},
-+#endif
-     {ENGINE_TAIL_CUSTOM, nullptr},        {ENGINE_TAIL_CUSTOM, nullptr},
-     {ENGINE_TAIL_CUSTOM, nullptr},        {ENGINE_TAIL_CUSTOM, nullptr},
- };
 diff --git a/src/core/lib/iomgr/ev_posix.h b/src/core/lib/iomgr/ev_posix.h
-index 479921ae16..3ea9a02a3a 100644
+index b12942dd2c..5e63c098da 100644
 --- a/src/core/lib/iomgr/ev_posix.h
 +++ b/src/core/lib/iomgr/ev_posix.h
 @@ -21,7 +21,9 @@
@@ -554,7 +494,7 @@ index 479921ae16..3ea9a02a3a 100644
  
  #include "src/core/lib/debug/trace.h"
  #include "src/core/lib/gprpp/global_config.h"
-@@ -200,8 +202,10 @@ bool grpc_add_closure_to_background_poller(grpc_closure* closure,
+@@ -202,8 +204,10 @@ bool grpc_add_closure_to_background_poller(grpc_closure* closure,
  /* Shut down all the closures registered in the background poller. */
  void grpc_shutdown_background_closure();
  
@@ -566,10 +506,10 @@ index 479921ae16..3ea9a02a3a 100644
  
  #endif /* GRPC_CORE_LIB_IOMGR_EV_POSIX_H */
 diff --git a/src/core/lib/iomgr/internal_errqueue.cc b/src/core/lib/iomgr/internal_errqueue.cc
-index ac644b2f43..fdd56811f7 100644
+index 5dcff1a0fd..60f1dc032a 100644
 --- a/src/core/lib/iomgr/internal_errqueue.cc
 +++ b/src/core/lib/iomgr/internal_errqueue.cc
-@@ -29,7 +29,9 @@
+@@ -25,7 +25,9 @@
  #include <errno.h>
  #include <stdlib.h>
  #include <string.h>
@@ -578,12 +518,12 @@ index ac644b2f43..fdd56811f7 100644
 +#endif
  
  namespace grpc_core {
- static bool errqueue_supported = false;
+ 
 diff --git a/src/core/lib/iomgr/port.h b/src/core/lib/iomgr/port.h
-index 3e32429d41..c4faa67072 100644
+index 65015b6ba5..a07bb17627 100644
 --- a/src/core/lib/iomgr/port.h
 +++ b/src/core/lib/iomgr/port.h
-@@ -127,6 +127,13 @@
+@@ -125,6 +125,13 @@
  #define GRPC_POSIX_SOCKETUTILS 1
  #define GRPC_POSIX_SYSCONF 1
  #define GRPC_POSIX_WAKEUP_FD 1
@@ -597,7 +537,7 @@ index 3e32429d41..c4faa67072 100644
  #elif defined(GPR_FREEBSD)
  #define GRPC_HAVE_ARPA_NAMESER 1
  #define GRPC_HAVE_IFADDRS 1
-@@ -211,6 +218,13 @@
+@@ -228,6 +235,13 @@
  #define GRPC_POSIX_SOCKET_UTILS_COMMON 1
  #endif
  
@@ -611,196 +551,11 @@ index 3e32429d41..c4faa67072 100644
  #if defined(GRPC_POSIX_HOST_NAME_MAX) && defined(GRPC_POSIX_SYSCONF)
  #error "Cannot define both GRPC_POSIX_HOST_NAME_MAX and GRPC_POSIX_SYSCONF"
  #endif
-diff --git a/src/core/lib/iomgr/resolve_address_posix.cc b/src/core/lib/iomgr/resolve_address_posix.cc
-index 32816fec0a..d68bee79d0 100644
---- a/src/core/lib/iomgr/resolve_address_posix.cc
-+++ b/src/core/lib/iomgr/resolve_address_posix.cc
-@@ -29,10 +29,13 @@
- #include <grpc/support/string_util.h>
- #include <grpc/support/time.h>
- 
-+#include "absl/strings/str_format.h"
-+
- #include "src/core/lib/gpr/string.h"
- #include "src/core/lib/gpr/useful.h"
- #include "src/core/lib/gprpp/host_port.h"
- #include "src/core/lib/gprpp/thd.h"
-+#include "src/core/lib/iomgr/executor.h"
- #include "src/core/lib/iomgr/block_annotate.h"
- #include "src/core/lib/iomgr/executor.h"
- #include "src/core/lib/iomgr/iomgr_internal.h"
-@@ -40,14 +43,59 @@
- #include "src/core/lib/iomgr/sockaddr.h"
- #include "src/core/lib/iomgr/unix_sockets_posix.h"
- 
-+#if defined(GPR_PLAYSTATION)
-+grpc_error_handle playstation_do_resolver_ntoa(const char* hostname, SceNetInAddr* addr) 
-+{
-+  SceNetId rid = -1;
-+  int memid = -1;
-+  int ret;
-+  grpc_error_handle err = GRPC_ERROR_NONE;
-+  
-+  ret = sceNetPoolCreate(__FUNCTION__, 4 * 1024, 0);
-+  if (ret < 0) {
-+    err = GRPC_ERROR_CREATE_FROM_CPP_STRING(absl::StrFormat(
-+        "sceNetPoolCreate() failed (0x%x errno=%d)", ret, sce_net_errno));
-+    goto failed;
-+  }
-+  memid = ret;
-+  ret = sceNetResolverCreate("resolver", memid, 0);
-+  if (ret < 0) {
-+    err = GRPC_ERROR_CREATE_FROM_CPP_STRING(absl::StrFormat(
-+        "sceNetResolverCreate() failed (0x%x errno=%d)\n", ret, sce_net_errno));
-+    goto failed;
-+  }
-+  rid = ret;
-+  ret = sceNetResolverStartNtoa(rid, hostname, addr, 0, 0, 0);
-+  if (ret < 0) {
-+    err = GRPC_ERROR_CREATE_FROM_CPP_STRING(absl::StrFormat(
-+        "sceNetResolverStartNtoa() failed (0x%x errno=%d)\n", ret, sce_net_errno));
-+    goto failed;
-+  }
-+  ret = sceNetResolverDestroy(rid);
-+  if (ret < 0) {
-+    err = GRPC_ERROR_CREATE_FROM_CPP_STRING(absl::StrFormat(
-+      "sceNetResolverDestroy() failed (0x%x errno=%d)\n", ret, sce_net_errno));
-+    goto failed;
-+  }
-+  ret = sceNetPoolDestroy(memid);
-+  if (ret < 0) {
-+    err = GRPC_ERROR_CREATE_FROM_CPP_STRING(absl::StrFormat(
-+      "sceNetPoolDestroy() failed (0x%x errno=%d)\n", ret, sce_net_errno));
-+    goto failed;
-+  }
-+  return GRPC_ERROR_NONE;
-+
-+failed:
-+  sceNetResolverDestroy(rid);
-+  sceNetPoolDestroy(memid);
-+  return err;
-+}
-+#endif
-+
- static grpc_error_handle posix_blocking_resolve_address(
-     const char* name, const char* default_port,
-     grpc_resolved_addresses** addresses) {
-   grpc_core::ExecCtx exec_ctx;
--  struct addrinfo hints;
--  struct addrinfo *result = nullptr, *resp;
--  int s;
--  size_t i;
-   grpc_error_handle err;
- 
-   std::string host;
-@@ -58,7 +106,7 @@ static grpc_error_handle posix_blocking_resolve_address(
-     err = grpc_error_set_str(
-         GRPC_ERROR_CREATE_FROM_STATIC_STRING("unparseable host:port"),
-         GRPC_ERROR_STR_TARGET_ADDRESS, grpc_slice_from_copied_string(name));
--    goto done;
-+    return err;
-   }
- 
-   if (port.empty()) {
-@@ -66,12 +114,50 @@ static grpc_error_handle posix_blocking_resolve_address(
-       err = grpc_error_set_str(
-           GRPC_ERROR_CREATE_FROM_STATIC_STRING("no port in name"),
-           GRPC_ERROR_STR_TARGET_ADDRESS, grpc_slice_from_copied_string(name));
--      goto done;
-+      return err;
-     }
-     port = default_port;
-   }
-+#if defined(GPR_PLAYSTATION)
-+  SceNetInAddr sin_addr;
-+  if (sceNetInetPton(SCE_NET_AF_INET, host.c_str(), &sin_addr) == 0) {
-+    GRPC_SCHEDULING_START_BLOCKING_REGION;
-+    err = playstation_do_resolver_ntoa(host.c_str(), &sin_addr);
-+    GRPC_SCHEDULING_END_BLOCKING_REGION;
-+    if (err != GRPC_ERROR_NONE) {
-+      return err;
-+    }
-+  }
-+  //parse port
-+  char* endptr = nullptr;
-+  int port_num = strtol(port.c_str(), &endptr, 10);
-+  if (endptr == port.c_str()) {
-+    if (port == "http") {
-+      port_num = 80;
-+    } else if (port == "https") {
-+      port_num = 443;
-+    }
-+    else {
-+      err = grpc_error_set_str(
-+          GRPC_ERROR_CREATE_FROM_STATIC_STRING("invalid port in name"),
-+          GRPC_ERROR_STR_TARGET_ADDRESS, grpc_slice_from_copied_string(name));
-+      return err;
-+    }
-+  }
-+  grpc_sockaddr_in result;
-+  memset(&result, 0, sizeof(result));
-+  result.sin_len = sizeof(result);
-+  result.sin_family = SCE_NET_AF_INET;
-+  result.sin_port = sceNetHtons(port_num);
-+  result.sin_addr.s_addr = sin_addr.s_addr;
- 
-+#else
-+  struct addrinfo *resp;
-+  int s;
-+  size_t i;
-+  struct addrinfo* result = nullptr;
-   /* Call getaddrinfo */
-+  struct addrinfo hints;
-   memset(&hints, 0, sizeof(hints));
-   hints.ai_family = AF_UNSPEC;     /* ipv4 or ipv6 */
-   hints.ai_socktype = SOCK_STREAM; /* stream socket */
-@@ -108,28 +194,40 @@ static grpc_error_handle posix_blocking_resolve_address(
-         GRPC_ERROR_STR_TARGET_ADDRESS, grpc_slice_from_copied_string(name));
-     goto done;
-   }
-+#endif
- 
-   /* Success path: set addrs non-NULL, fill it in */
-   *addresses = static_cast<grpc_resolved_addresses*>(
-       gpr_malloc(sizeof(grpc_resolved_addresses)));
-+#if defined(GPR_PLAYSTATION)
-+  (*addresses)->naddrs = 1;
-+#else
-   (*addresses)->naddrs = 0;
-   for (resp = result; resp != nullptr; resp = resp->ai_next) {
-     (*addresses)->naddrs++;
-   }
-+#endif
-   (*addresses)->addrs = static_cast<grpc_resolved_address*>(
-       gpr_malloc(sizeof(grpc_resolved_address) * (*addresses)->naddrs));
-+
-+#if defined(GPR_PLAYSTATION)
-+  memcpy(&(*addresses)->addrs[0].addr, &(result), sizeof(result));
-+  (*addresses)->addrs[0].len = sizeof(result);
-+#else
-   i = 0;
-   for (resp = result; resp != nullptr; resp = resp->ai_next) {
-     memcpy(&(*addresses)->addrs[i].addr, resp->ai_addr, resp->ai_addrlen);
-     (*addresses)->addrs[i].len = resp->ai_addrlen;
-     i++;
-   }
-+#endif
-   err = GRPC_ERROR_NONE;
--
-+#if !defined(GPR_PLAYSTATION)
- done:
-   if (result) {
-     freeaddrinfo(result);
-   }
-+#endif
-   return err;
- }
- 
 diff --git a/src/core/lib/iomgr/sockaddr_posix.h b/src/core/lib/iomgr/sockaddr_posix.h
-index 3cedd9082d..320c85b95f 100644
+index 4909806aae..28845f7c9e 100644
 --- a/src/core/lib/iomgr/sockaddr_posix.h
 +++ b/src/core/lib/iomgr/sockaddr_posix.h
-@@ -25,7 +25,9 @@
+@@ -27,7 +27,9 @@
  
  #ifdef GRPC_POSIX_SOCKET_SOCKADDR
  #include <arpa/inet.h>
@@ -811,7 +566,7 @@ index 3cedd9082d..320c85b95f 100644
  #include <sys/socket.h>
  #include <sys/types.h>
 diff --git a/src/core/lib/iomgr/socket_utils_common_posix.cc b/src/core/lib/iomgr/socket_utils_common_posix.cc
-index 53df6d6943..951e7858e4 100644
+index f32dc0fd50..acbef4d04c 100644
 --- a/src/core/lib/iomgr/socket_utils_common_posix.cc
 +++ b/src/core/lib/iomgr/socket_utils_common_posix.cc
 @@ -69,6 +69,12 @@ grpc_error_handle grpc_set_socket_zerocopy(int fd) {
@@ -837,56 +592,25 @@ index 53df6d6943..951e7858e4 100644
  }
  
 diff --git a/src/core/lib/iomgr/tcp_client_posix.cc b/src/core/lib/iomgr/tcp_client_posix.cc
-index 3e8d20a9d8..cd779b93a8 100644
+index e11e779033..c615fb5209 100644
 --- a/src/core/lib/iomgr/tcp_client_posix.cc
 +++ b/src/core/lib/iomgr/tcp_client_posix.cc
-@@ -74,8 +74,10 @@ static grpc_error_handle prepare_socket(const grpc_resolved_address* addr,
+@@ -100,8 +100,10 @@ static grpc_error_handle prepare_socket(
  
    err = grpc_set_socket_nonblocking(fd, 1);
-   if (err != GRPC_ERROR_NONE) goto error;
+   if (!GRPC_ERROR_IS_NONE(err)) goto error;
 +#if !defined(GPR_PLAYSTATION)
    err = grpc_set_socket_cloexec(fd, 1);
-   if (err != GRPC_ERROR_NONE) goto error;
+   if (!GRPC_ERROR_IS_NONE(err)) goto error;
 +#endif
    if (!grpc_is_unix_socket(addr)) {
      err = grpc_set_socket_low_latency(fd, 1);
-     if (err != GRPC_ERROR_NONE) goto error;
-@@ -292,9 +294,17 @@ void grpc_tcp_client_create_from_prepared_fd(
-     grpc_slice_allocator* slice_allocator) {
-   int err;
-   do {
-+#if defined(GPR_PLAYSTATION)
-+    err = sceNetConnect(fd, reinterpret_cast<const SceNetSockaddr*>(addr->addr),
-+                        addr->len);
-+  } while (err < 0 && sce_net_errno == EINTR);
-+  int net_error = sce_net_errno;
-+#else
-     err = connect(fd, reinterpret_cast<const grpc_sockaddr*>(addr->addr),
-                   addr->len);
-   } while (err < 0 && errno == EINTR);
-+  int net_error = errno;
-+#endif
- 
-   std::string name = absl::StrCat("tcp-client:", grpc_sockaddr_to_uri(addr));
-   grpc_fd* fdobj = grpc_fd_create(fd, name.c_str(), true);
-@@ -306,9 +316,10 @@ void grpc_tcp_client_create_from_prepared_fd(
-     grpc_core::ExecCtx::Run(DEBUG_LOCATION, closure, GRPC_ERROR_NONE);
-     return;
-   }
--  if (errno != EWOULDBLOCK && errno != EINPROGRESS) {
-+
-+  if (net_error != EWOULDBLOCK && net_error != EINPROGRESS) {
-     grpc_slice_allocator_destroy(slice_allocator);
--    grpc_error_handle error = GRPC_OS_ERROR(errno, "connect");
-+    grpc_error_handle error = GRPC_OS_ERROR(net_error, "connect");
-     error = grpc_error_set_str(
-         error, GRPC_ERROR_STR_TARGET_ADDRESS,
-         grpc_slice_from_cpp_string(grpc_sockaddr_to_uri(addr)));
+     if (!GRPC_ERROR_IS_NONE(err)) goto error;
 diff --git a/src/core/lib/iomgr/tcp_server_utils_posix_common.cc b/src/core/lib/iomgr/tcp_server_utils_posix_common.cc
-index 7501596eca..978f4d811d 100644
+index 73a6b943ec..d7f01c1e71 100644
 --- a/src/core/lib/iomgr/tcp_server_utils_posix_common.cc
 +++ b/src/core/lib/iomgr/tcp_server_utils_posix_common.cc
-@@ -48,6 +48,9 @@ static int s_max_accept_queue_size;
+@@ -49,6 +49,9 @@ static int s_max_accept_queue_size;
  
  /* get max listen queue size on linux */
  static void init_max_accept_queue_size(void) {
@@ -896,27 +620,19 @@ index 7501596eca..978f4d811d 100644
    int n = SOMAXCONN;
    char buf[64];
    FILE* fp = fopen("/proc/sys/net/core/somaxconn", "r");
-@@ -72,6 +75,7 @@ static void init_max_accept_queue_size(void) {
-             "connection drops",
-             s_max_accept_queue_size);
-   }
-+#endif
- }
- 
- static int get_max_accept_queue_size(void) {
-@@ -167,8 +171,10 @@ grpc_error_handle grpc_tcp_server_prepare_socket(
+@@ -171,8 +174,10 @@ grpc_error_handle grpc_tcp_server_prepare_socket(
  #endif
    err = grpc_set_socket_nonblocking(fd, 1);
-   if (err != GRPC_ERROR_NONE) goto error;
+   if (!GRPC_ERROR_IS_NONE(err)) goto error;
 +#if !defined(GPR_PLAYSTATION)
    err = grpc_set_socket_cloexec(fd, 1);
-   if (err != GRPC_ERROR_NONE) goto error;
+   if (!GRPC_ERROR_IS_NONE(err)) goto error;
 +#endif
    if (!grpc_is_unix_socket(addr)) {
      err = grpc_set_socket_low_latency(fd, 1);
-     if (err != GRPC_ERROR_NONE) goto error;
+     if (!GRPC_ERROR_IS_NONE(err)) goto error;
 diff --git a/src/core/lib/iomgr/wakeup_fd_pipe.cc b/src/core/lib/iomgr/wakeup_fd_pipe.cc
-index e25a944880..76082478ff 100644
+index 50cd594b92..32797722a6 100644
 --- a/src/core/lib/iomgr/wakeup_fd_pipe.cc
 +++ b/src/core/lib/iomgr/wakeup_fd_pipe.cc
 @@ -26,19 +26,83 @@
@@ -1002,7 +718,7 @@ index e25a944880..76082478ff 100644
 +#endif
    grpc_error_handle err;
    err = grpc_set_socket_nonblocking(pipefd[0], 1);
-   if (err != GRPC_ERROR_NONE) return err;
+   if (!GRPC_ERROR_IS_NONE(err)) return err;
 @@ -54,10 +118,18 @@ static grpc_error_handle pipe_consume(grpc_wakeup_fd* fd_info) {
    ssize_t r;
  
@@ -1061,3 +777,6 @@ index be59d44fee..662354a122 100644
  #include <sys/socket.h>
  #define ADDRESS_SORTING_POSIX 1
  #endif
+-- 
+2.39.0.windows.1
+
