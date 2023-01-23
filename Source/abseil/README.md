@@ -1,31 +1,18 @@
 # [abseil](https://abseil.io/)
 Abseil is an open source collection of C++ libraries drawn from the most fundamental pieces of Google’s internal codebase. These libraries are the nuts-and-bolts that underpin almost everything Google runs. Bits and pieces of these APIs are embedded in most of our open source projects, and Abseil aims to bring them together into one comprehensive project. Abseil encompasses the most basic building blocks of Google’s codebase: code that is production-tested and will be fully maintained for years to come.
 
-## Version
-Abseil LTS 20220623.1
-
-## Submodule
-https://github.com/abseil/abseil-cpp/tree/lts_2022_06_23
-
 ## Patch
 ```
 cd %TL_LIBRARIES_PATH%/Source/abseil/abseil
-git apply --whitespace=nowarn ../patch/diff-base-on-2021_03_25.patch
+git apply --whitespace=nowarn ../patch/*.patch
 ```
 
 ## Build
 
-### 1. Windows
+### 1. Windows/Xbox
 ```
-mkdir %TL_LIBRARIES_PATH%\_build\win64\abseil & cd %TL_LIBRARIES_PATH%\_build\win64\abseil
-cmake -G "Visual Studio 16 2019" -A x64 ^
- -DCMAKE_INSTALL_PREFIX=%TL_LIBRARIES_PATH%/output/abseil ^
- -DCMAKE_INSTALL_LIBDIR="lib/win64/$<$<CONFIG:Debug>:Debug>$<$<CONFIG:Release>:Release>" ^
- -DCMAKE_INSTALL_CMAKEDIR=lib/win64/cmake ^
- -DCMAKE_POLICY_DEFAULT_CMP0091=NEW -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL ^
- %TL_LIBRARIES_PATH%/Source/abseil/abseil
-cmake --build . --target INSTALL --config Debug
-cmake --build . --target INSTALL --config Release
+cd build_tools
+./build_for_windows.bat
 ```
 ### 2. Android(armv7, arm64, x64)
 ```
@@ -47,16 +34,8 @@ mkdir %a & pushd %a ^
 ```
 ### 3. Linux
 ```
-mkdir %TL_LIBRARIES_PATH%\_build\linux\abseil & cd %TL_LIBRARIES_PATH%\_build\linux\abseil
-cmake -G "Ninja Multi-Config" -DCMAKE_MAKE_PROGRAM=%NINJA_EXE_PATH% ^
- -DCMAKE_TOOLCHAIN_FILE="%TL_LIBRARIES_PATH%\BuildTools\linux\ue5-linux-cross-compile.cmake" ^
- -DUE_THIRD_PARTY_PATH=%UE_THIRD_PARTY_PATH% ^
- -DCMAKE_INSTALL_PREFIX=%TL_LIBRARIES_PATH%/output/abseil ^
- -DCMAKE_INSTALL_LIBDIR="lib/linux/$<$<CONFIG:Debug>:Debug>$<$<CONFIG:Release>:Release>" ^
- -DCMAKE_INSTALL_CMAKEDIR=lib/linux/cmake ^
- %TL_LIBRARIES_PATH%/Source/abseil/abseil
-cmake --build . --target install --config Debug
-cmake --build . --target install --config Release
+cd build_tools
+./build_for_linux.bat
 ```
 ### 4. Mac
 ```
@@ -80,15 +59,4 @@ cmake -G "Unix Makefiles" \
  -DCMAKE_CXX_STANDARD=17 \
  $TL_LIBRARIES_PATH/Source/abseil/abseil
 cmake --build . --target install --config Release
-```
-### 6.PlayStation 5
-```
-mkdir %TL_LIBRARIES_PATH%\_build\ps5\abseil & cd %TL_LIBRARIES_PATH%\_build\ps5\abseil
-"%SCE_ROOT_DIR%\Prospero\Tools\CMake\PS5CMake.bat" ^
- -DCMAKE_INSTALL_PREFIX=%TL_LIBRARIES_PATH%/output/abseil ^
- -DCMAKE_INSTALL_LIBDIR="lib/ps5/$<$<CONFIG:Debug>:Debug>$<$<CONFIG:Release>:Release>" ^
- -DCMAKE_INSTALL_CMAKEDIR=lib/ps5/cmake -DCMAKE_CXX_STANDARD=14 ^
- %TL_LIBRARIES_PATH%/Source/abseil/abseil
-cmake --build . --target INSTALL --config Debug
-cmake --build . --target INSTALL --config Release
 ```

@@ -2,48 +2,23 @@
 gRPC is a modern open source high performance Remote Procedure Call (RPC) framework that can run in any environment. It can efficiently connect services in and across data centers with pluggable support for load balancing, tracing, health checking and authentication. It is also applicable in last mile of distributed computing to connect devices, mobile applications and browsers to backend services.
 
 ## Version
-1.41
+1.50
 
 ## Submodule
-https://github.com/grpc/grpc/tree/v1.41.0
+https://github.com/grpc/grpc/tree/v1.50.0
 
 ## Patch
 ```
-cd %TL_LIBRARIES_PATH%/Source/grpc/grpc-1.41.0
-git apply --whitespace=nowarn  ../patch/diff-base-on-1.41.0.patch
+cd %TL_LIBRARIES_PATH%/Source/grpc/grpc
+git apply --whitespace=nowarn ../patch/*.patch
 ```
 
 ## Build
 
-### 1. Windows
+### 1. Windows/Xbox
 ```
-mkdir %TL_LIBRARIES_PATH%\_build\win64\grpc & cd %TL_LIBRARIES_PATH%\_build\win64\grpc
-cmake -G "Visual Studio 16 2019" -A x64 ^
- -DCMAKE_INSTALL_PREFIX=%TL_LIBRARIES_PATH%/output/grpc ^
- -DgRPC_INSTALL_LIBDIR="lib/win64/$<$<CONFIG:Debug>:Debug>$<$<CONFIG:Release>:Release>" ^
- -DgRPC_INSTALL_CMAKEDIR=lib/win64/cmake -DgRPC_USE_CARES=OFF ^
- -DgRPC_ABSL_PROVIDER=package -Dabsl_DIR="%TL_LIBRARIES_PATH%/output/abseil/lib/win64/cmake" ^
- -DgRPC_RE2_PROVIDER=package -Dre2_DIR="%TL_LIBRARIES_PATH%/output/re2/lib/win64/cmake" ^
- -DgRPC_PROTOBUF_PROVIDER=package -DgRPC_PROTOBUF_PACKAGE_TYPE=CONFIG ^
- -DProtobuf_DIR="%TL_LIBRARIES_PATH%/output/protobuf/lib/win64/cmake" ^
- -DgRPC_ZLIB_PROVIDER=package ^
- -DZLIB_INCLUDE_DIR="%UE_THIRD_PARTY_PATH%/zlib/v1.2.8/include/Win64/VS2015" ^
- -DZLIB_LIBRARY_RELEASE="%UE_THIRD_PARTY_PATH%/zlib/v1.2.8/lib/Win64/VS2015/Release/zlibstatic.lib" ^
- -DZLIB_LIBRARY_DEBUG="%UE_THIRD_PARTY_PATH%/zlib/v1.2.8/lib/Win64/VS2015/Debug/zlibstatic.lib" ^
- -DgRPC_SSL_PROVIDER=package ^
- -DOPENSSL_INCLUDE_DIR="%UE_THIRD_PARTY_PATH%/OpenSSL/1.1.1k/include/Win64/VS2015" ^
- -DLIB_EAY_LIBRARY_DEBUG="%UE_THIRD_PARTY_PATH%/OpenSSL/1.1.1k/lib/Win64/VS2015/Debug/libcrypto.lib" ^
- -DLIB_EAY_LIBRARY_RELEASE="%UE_THIRD_PARTY_PATH%/OpenSSL/1.1.1k/lib/Win64/VS2015/Release/libcrypto.lib" ^
- -DLIB_EAY_DEBUG="%UE_THIRD_PARTY_PATH%/OpenSSL/1.1.1k/lib/Win64/VS2015/Debug/libcrypto.lib" ^
- -DLIB_EAY_RELEASE="%UE_THIRD_PARTY_PATH%/OpenSSL/1.1.1k/lib/Win64/VS2015/Release/libcrypto.lib" ^
- -DSSL_EAY_DEBUG="%UE_THIRD_PARTY_PATH%/OpenSSL/1.1.1k/lib/Win64/VS2015/Debug/libssl.lib" ^
- -DSSL_EAY_LIBRARY_DEBUG="%UE_THIRD_PARTY_PATH%/OpenSSL/1.1.1k/lib/Win64/VS2015/Debug/libssl.lib" ^
- -DSSL_EAY_LIBRARY_RELEASE="%UE_THIRD_PARTY_PATH%/OpenSSL/1.1.1k/lib/Win64/VS2015/Release/libssl.lib" ^
- -DSSL_EAY_RELEASE="%UE_THIRD_PARTY_PATH%/OpenSSL/1.1.1k/lib/Win64/VS2015/Release/libssl.lib" ^
- -DCMAKE_POLICY_DEFAULT_CMP0091=NEW -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL ^
- %TL_LIBRARIES_PATH%/Source/grpc/grpc-1.41.0
-cmake --build . --target INSTALL --config Debug
-cmake --build . --target INSTALL --config Release
+cd build_tools
+./build_for_windows.bat
 ```
 ### 2. Android(armv7, arm64, x64)
 ```
@@ -69,7 +44,7 @@ mkdir %a & pushd %a ^
  -DOPENSSL_SSL_LIBRARY="%UE_THIRD_PARTY_PATH%/OpenSSL/1.1.1k/lib/Android/%b/libssl.a" ^
  -DOPENSSL_CRYPTO_LIBRARY="%UE_THIRD_PARTY_PATH%/OpenSSL/1.1.1k/lib/Android/%b/libcrypto.a" ^
  -DgRPC_BUILD_CODEGEN=OFF -DgRPC_BUILD_CSHARP_EXT=OFF ^
- %TL_LIBRARIES_PATH%/Source/grpc/grpc-1.41.0 ^
+ %TL_LIBRARIES_PATH%/Source/grpc/grpc ^
  & "%ANDROID_HOME%\cmake\%NDK_CMAKE_VERSION%\bin\cmake.exe" --build . --target install --config Debug ^
  & "%ANDROID_HOME%\cmake\%NDK_CMAKE_VERSION%\bin\cmake.exe" --build . --target install --config Release ^
  & popd
@@ -77,34 +52,8 @@ mkdir %a & pushd %a ^
 ```
 ### 3. Linux
 ```
-mkdir %TL_LIBRARIES_PATH%\_build\linux\grpc & cd %TL_LIBRARIES_PATH%\_build\linux\grpc
-cmake -G "Ninja Multi-Config" -DCMAKE_MAKE_PROGRAM=%NINJA_EXE_PATH% ^
- -DCMAKE_TOOLCHAIN_FILE="%TL_LIBRARIES_PATH%\BuildTools\linux\ue5-linux-cross-compile.cmake" ^
- -DUE_THIRD_PARTY_PATH=%UE_THIRD_PARTY_PATH% ^
- -DCMAKE_INSTALL_PREFIX=%TL_LIBRARIES_PATH%/output/grpc ^
- -DgRPC_INSTALL_LIBDIR="lib/linux/$<$<CONFIG:Debug>:Debug>$<$<CONFIG:Release>:Release>" ^
- -DgRPC_INSTALL_CMAKEDIR=lib/linux/cmake ^
- -DgRPC_ABSL_PROVIDER=package -Dabsl_DIR="%TL_LIBRARIES_PATH%/output/abseil/lib/linux/cmake" ^
- -DgRPC_USE_CARES=OFF ^
- -DgRPC_RE2_PROVIDER=package -Dre2_DIR="%TL_LIBRARIES_PATH%/output/re2/lib/linux/cmake" ^
- -DgRPC_PROTOBUF_PROVIDER=package -DgRPC_PROTOBUF_PACKAGE_TYPE=CONFIG ^
- -DProtobuf_DIR="%TL_LIBRARIES_PATH%/output/protobuf/lib/linux/cmake" ^
- -DgRPC_ZLIB_PROVIDER=package ^
- -DZLIB_INCLUDE_DIR="%UE_THIRD_PARTY_PATH%/zlib/zlib-1.2.5/Inc" ^
- -DZLIB_LIBRARY_RELEASE="%UE_THIRD_PARTY_PATH%/zlib/zlib-1.2.5/Lib/Linux/x86_64-unknown-linux-gnu/libz.a" ^
- -DZLIB_LIBRARY_DEBUG="%UE_THIRD_PARTY_PATH%/zlib/zlib-1.2.5/Lib/Linux/x86_64-unknown-linux-gnu/libz.a" ^
- -DgRPC_SSL_PROVIDER=package ^
- -DOPENSSL_INCLUDE_DIR="%UE_THIRD_PARTY_PATH%/OpenSSL/1.1.1c/include/Linux/x86_64-unknown-linux-gnu" ^
- -DOPENSSL_SSL_LIBRARY="%UE_THIRD_PARTY_PATH%/OpenSSL/1.1.1c/lib/Linux/x86_64-unknown-linux-gnu/libssl.a" ^
- -DOPENSSL_CRYPTO_LIBRARY="%UE_THIRD_PARTY_PATH%/OpenSSL/1.1.1c/lib/Linux/x86_64-unknown-linux-gnu/libcrypto.a" ^
- -DgRPC_BUILD_CODEGEN=OFF -DgRPC_BUILD_CSHARP_EXT=OFF ^
- -DgRPC_BUILD_GRPC_CPP_PLUGIN=OFF -DgRPC_BUILD_GRPC_CSHARP_PLUGIN=OFF ^
- -DgRPC_BUILD_GRPC_NODE_PLUGIN=OFF -DgRPC_BUILD_GRPC_OBJECTIVE_C_PLUGIN=OFF ^
- -DgRPC_BUILD_GRPC_PHP_PLUGIN=OFF -DgRPC_BUILD_GRPC_PYTHON_PLUGIN=OFF ^
- -DgRPC_BUILD_GRPC_RUBY_PLUGIN=OFF ^
- %TL_LIBRARIES_PATH%/Source/grpc/grpc-1.41.0
-cmake --build . --target install --config Debug
-cmake --build . --target install --config Release
+cd build_tools
+./build_for_linux.bat
 ```
 ### 4. Mac
 ```
@@ -130,7 +79,7 @@ cmake -G "Unix Makefiles" \
  -DgRPC_BUILD_GRPC_NODE_PLUGIN=OFF -DgRPC_BUILD_GRPC_OBJECTIVE_C_PLUGIN=OFF \
  -DgRPC_BUILD_GRPC_PHP_PLUGIN=OFF -DgRPC_BUILD_GRPC_PYTHON_PLUGIN=OFF \
  -DgRPC_BUILD_GRPC_RUBY_PLUGIN=OFF \
- $TL_LIBRARIES_PATH/Source/grpc/grpc-1.41.0
+ $TL_LIBRARIES_PATH/Source/grpc/grpc
 cmake --build . --target install --config Release
 ```
 ### 5. iOS
@@ -159,36 +108,6 @@ cmake -G "Unix Makefiles" \
  -DgRPC_BUILD_GRPC_NODE_PLUGIN=OFF -DgRPC_BUILD_GRPC_OBJECTIVE_C_PLUGIN=OFF \
  -DgRPC_BUILD_GRPC_PHP_PLUGIN=OFF -DgRPC_BUILD_GRPC_PYTHON_PLUGIN=OFF \
  -DgRPC_BUILD_GRPC_RUBY_PLUGIN=OFF \
- $TL_LIBRARIES_PATH/Source/grpc/grpc-1.41.0
+ $TL_LIBRARIES_PATH/Source/grpc/grpc
 cmake --build . --target install --config Release
-```
-### 3. Play Station 5
-```
-mkdir %TL_LIBRARIES_PATH%\_build\ps5\grpc & cd %TL_LIBRARIES_PATH%\_build\ps5\grpc
-"%SCE_ROOT_DIR%\Prospero\Tools\CMake\PS5CMake.bat" ^
- -DCMAKE_INSTALL_PREFIX=%TL_LIBRARIES_PATH%/output/grpc ^
- -DCMAKE_CXX_STANDARD=14 ^
- -DgRPC_INSTALL_LIBDIR="lib/ps5/$<$<CONFIG:Debug>:Debug>$<$<CONFIG:Release>:Release>" ^
- -DgRPC_INSTALL_CMAKEDIR=lib/ps5/cmake ^
- -DgRPC_ABSL_PROVIDER=package -Dabsl_DIR="%TL_LIBRARIES_PATH%/output/abseil/lib/ps5/cmake" ^
- -DgRPC_USE_CARES=OFF ^
- -DgRPC_RE2_PROVIDER=package -Dre2_DIR="%TL_LIBRARIES_PATH%/output/re2/lib/ps5/cmake" ^
- -DgRPC_PROTOBUF_PROVIDER=package -DgRPC_PROTOBUF_PACKAGE_TYPE=CONFIG ^
- -DProtobuf_DIR="%TL_LIBRARIES_PATH%/output/protobuf/lib/ps5/cmake" ^
- -DgRPC_ZLIB_PROVIDER=package ^
- -DZLIB_INCLUDE_DIR="%UE_THIRD_PARTY_PATH%/zlib/zlib-1.2.5/Inc" ^
- -DZLIB_LIBRARY_RELEASE="%UE_PS5_THIRD_PARTY_PATH%/zlib/zlib-1.2.5/Lib/libz.a" ^
- -DZLIB_LIBRARY_DEBUG="%UE_PS5_THIRD_PARTY_PATH%/zlib/zlib-1.2.5/Lib/libz.a" ^
- -DgRPC_SSL_PROVIDER=package ^
- -DOPENSSL_INCLUDE_DIR="%UE_PS5_THIRD_PARTY_PATH%/OpenSSL/1.1.1k/include" ^
- -DOPENSSL_SSL_LIBRARY="%UE_PS5_THIRD_PARTY_PATH%/OpenSSL/1.1.1k/Lib/Release/libssl.a" ^
- -DOPENSSL_CRYPTO_LIBRARY="%UE_PS5_THIRD_PARTY_PATH%/OpenSSL/1.1.1k/Lib/Release/libcrypto.a" ^
- -DgRPC_BUILD_CODEGEN=OFF -DgRPC_BUILD_CSHARP_EXT=OFF ^
- -DgRPC_BUILD_GRPC_CPP_PLUGIN=OFF -DgRPC_BUILD_GRPC_CSHARP_PLUGIN=OFF ^
- -DgRPC_BUILD_GRPC_NODE_PLUGIN=OFF -DgRPC_BUILD_GRPC_OBJECTIVE_C_PLUGIN=OFF ^
- -DgRPC_BUILD_GRPC_PHP_PLUGIN=OFF -DgRPC_BUILD_GRPC_PYTHON_PLUGIN=OFF ^
- -DgRPC_BUILD_GRPC_RUBY_PLUGIN=OFF ^
- %TL_LIBRARIES_PATH%/Source/grpc/grpc-1.41.0
-cmake --build . --target INSTALL --config Debug
-cmake --build . --target INSTALL --config Release
 ```
