@@ -93,9 +93,9 @@ cmake -G "Ninja Multi-Config" -DCMAKE_MAKE_PROGRAM=%NINJA_EXE_PATH% ^
  -DZLIB_LIBRARY_RELEASE="%UE_THIRD_PARTY_PATH%/zlib/zlib-1.2.5/Lib/Linux/x86_64-unknown-linux-gnu/libz.a" ^
  -DZLIB_LIBRARY_DEBUG="%UE_THIRD_PARTY_PATH%/zlib/zlib-1.2.5/Lib/Linux/x86_64-unknown-linux-gnu/libz.a" ^
  -DgRPC_SSL_PROVIDER=package ^
- -DOPENSSL_INCLUDE_DIR="%UE_THIRD_PARTY_PATH%/OpenSSL/1.1.1c/include/Unix/x86_64-unknown-linux-gnu" ^
- -DOPENSSL_SSL_LIBRARY="%UE_THIRD_PARTY_PATH%/OpenSSL/1.1.1c/lib/Unix/x86_64-unknown-linux-gnu/libssl.a" ^
- -DOPENSSL_CRYPTO_LIBRARY="%UE_THIRD_PARTY_PATH%/OpenSSL/1.1.1c/lib/Unix/x86_64-unknown-linux-gnu/libcrypto.a" ^
+ -DOPENSSL_INCLUDE_DIR="%UE_THIRD_PARTY_PATH%/OpenSSL/1.1.1n/include/Unix/x86_64-unknown-linux-gnu" ^
+ -DOPENSSL_SSL_LIBRARY="%UE_THIRD_PARTY_PATH%/OpenSSL/1.1.1n/lib/Unix/x86_64-unknown-linux-gnu/libssl.a" ^
+ -DOPENSSL_CRYPTO_LIBRARY="%UE_THIRD_PARTY_PATH%/OpenSSL/1.1.1n/lib/Unix/x86_64-unknown-linux-gnu/libcrypto.a" ^
  -DgRPC_BUILD_CODEGEN=OFF -DgRPC_BUILD_CSHARP_EXT=OFF ^
  -DgRPC_BUILD_GRPC_CPP_PLUGIN=OFF -DgRPC_BUILD_GRPC_CSHARP_PLUGIN=OFF ^
  -DgRPC_BUILD_GRPC_NODE_PLUGIN=OFF -DgRPC_BUILD_GRPC_OBJECTIVE_C_PLUGIN=OFF ^

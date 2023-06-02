@@ -89,16 +89,16 @@ cmake -G "Visual Studio 17 2022" -A x64 ^
  -DZLIB_LIBRARY_RELEASE="%UE_THIRD_PARTY_PATH%/zlib/v1.2.8/lib/Win64/VS2015/Release/zlibstatic.lib" ^
  -DZLIB_LIBRARY_DEBUG="%UE_THIRD_PARTY_PATH%/zlib/v1.2.8/lib/Win64/VS2015/Debug/zlibstatic.lib" ^
  -DgRPC_SSL_PROVIDER=package -DgRPC_BUILD_TESTS=OFF^
- -DOPENSSL_INCLUDE_DIR="%UE_THIRD_PARTY_PATH%/OpenSSL/1.1.1k/include/Win64/VS2015" ^
- -DLIB_EAY_LIBRARY_DEBUG="%UE_THIRD_PARTY_PATH%/OpenSSL/1.1.1k/lib/Win64/VS2015/Debug/libcrypto.lib" ^
- -DLIB_EAY_LIBRARY_RELEASE="%UE_THIRD_PARTY_PATH%/OpenSSL/1.1.1k/lib/Win64/VS2015/Release/libcrypto.lib" ^
- -DLIB_EAY_DEBUG="%UE_THIRD_PARTY_PATH%/OpenSSL/1.1.1k/lib/Win64/VS2015/Debug/libcrypto.lib" ^
- -DLIB_EAY_RELEASE="%UE_THIRD_PARTY_PATH%/OpenSSL/1.1.1k/lib/Win64/VS2015/Release/libcrypto.lib" ^
- -DSSL_EAY_DEBUG="%UE_THIRD_PARTY_PATH%/OpenSSL/1.1.1k/lib/Win64/VS2015/Debug/libssl.lib" ^
- -DSSL_EAY_LIBRARY_DEBUG="%UE_THIRD_PARTY_PATH%/OpenSSL/1.1.1k/lib/Win64/VS2015/Debug/libssl.lib" ^
- -DSSL_EAY_LIBRARY_RELEASE="%UE_THIRD_PARTY_PATH%/OpenSSL/1.1.1k/lib/Win64/VS2015/Release/libssl.lib" ^
- -DSSL_EAY_RELEASE="%UE_THIRD_PARTY_PATH%/OpenSSL/1.1.1k/lib/Win64/VS2015/Release/libssl.lib" ^
- -DSSL_EAY_DEBUG="%UE_THIRD_PARTY_PATH%/OpenSSL/1.1.1k/lib/Win64/VS2015/Debug/libssl.lib" ^
+ -DOPENSSL_INCLUDE_DIR="%UE_THIRD_PARTY_PATH%/OpenSSL/1.1.1n/include/Win64/VS2015" ^
+ -DLIB_EAY_LIBRARY_DEBUG="%UE_THIRD_PARTY_PATH%/OpenSSL/1.1.1n/lib/Win64/VS2015/Debug/libcrypto.lib" ^
+ -DLIB_EAY_LIBRARY_RELEASE="%UE_THIRD_PARTY_PATH%/OpenSSL/1.1.1n/lib/Win64/VS2015/Release/libcrypto.lib" ^
+ -DLIB_EAY_DEBUG="%UE_THIRD_PARTY_PATH%/OpenSSL/1.1.1n/lib/Win64/VS2015/Debug/libcrypto.lib" ^
+ -DLIB_EAY_RELEASE="%UE_THIRD_PARTY_PATH%/OpenSSL/1.1.1n/lib/Win64/VS2015/Release/libcrypto.lib" ^
+ -DSSL_EAY_DEBUG="%UE_THIRD_PARTY_PATH%/OpenSSL/1.1.1n/lib/Win64/VS2015/Debug/libssl.lib" ^
+ -DSSL_EAY_LIBRARY_DEBUG="%UE_THIRD_PARTY_PATH%/OpenSSL/1.1.1n/lib/Win64/VS2015/Debug/libssl.lib" ^
+ -DSSL_EAY_LIBRARY_RELEASE="%UE_THIRD_PARTY_PATH%/OpenSSL/1.1.1n/lib/Win64/VS2015/Release/libssl.lib" ^
+ -DSSL_EAY_RELEASE="%UE_THIRD_PARTY_PATH%/OpenSSL/1.1.1n/lib/Win64/VS2015/Release/libssl.lib" ^
+ -DSSL_EAY_DEBUG="%UE_THIRD_PARTY_PATH%/OpenSSL/1.1.1n/lib/Win64/VS2015/Debug/libssl.lib" ^
  -DCMAKE_POLICY_DEFAULT_CMP0091=NEW -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL ^
  %TL_LIBRARIES_PATH%/Source/grpc/grpc
 if %errorlevel% neq 0 exit /b %errorlevel%
