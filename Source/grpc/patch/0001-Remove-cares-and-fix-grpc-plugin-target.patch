@@ -1,0 +1,64 @@
+From d30d48f926e3701f4fce6db3252126a82b39ae9e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Gunnar=20Sv=20Sigurbj=C3=B6rnsson?=
+ <gunnar@themainframe.com>
+Date: Wed, 31 May 2023 13:45:10 +0000
+Subject: [PATCH] Remove cares and fix grpc plugin target
+
+---
+ CMakeLists.txt | 19 ++++++++++++++-----
+ 1 file changed, 14 insertions(+), 5 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index ec370e9fdc..043129918c 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -49,6 +49,7 @@ option(gRPC_BUILD_TESTS "Build tests" OFF)
+ option(gRPC_BUILD_CODEGEN "Build codegen" ON)
+ option(gRPC_BUILD_CSHARP_EXT "Build C# extensions" ON)
+ option(gRPC_BACKWARDS_COMPATIBILITY_MODE "Build libraries that are binary compatible across a larger number of OS and libc versions" OFF)
++option(gRPC_USE_CARES "Use c-ares as DNS requests library" ON)
+ 
+ set(gRPC_INSTALL_default ON)
+ if(NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+@@ -305,6 +306,13 @@ if (gRPC_XDS_USER_AGENT_IS_CSHARP)
+   add_definitions("-DGRPC_XDS_USER_AGENT_NAME_SUFFIX=\"csharp\"" "-DGRPC_XDS_USER_AGENT_VERSION_SUFFIX=\"2.54.0\"")
+ endif()
+ 
++if (gRPC_USE_CARES)
++ add_definitions("-DGRPC_ARES=1")
++ include(cmake/cares.cmake)
++else()
++ add_definitions("-DGRPC_ARES=0")
++endif()
++
+ if(UNIX AND NOT HAIKU)
+   # -pthread does more than -lpthread
+   set(THREADS_PREFER_PTHREAD_FLAG ON)
+@@ -321,7 +329,6 @@ include(cmake/ccache.cmake)
+ include(cmake/abseil-cpp.cmake)
+ include(cmake/address_sorting.cmake)
+ include(cmake/benchmark.cmake)
+-include(cmake/cares.cmake)
+ include(cmake/protobuf.cmake)
+ include(cmake/re2.cmake)
+ include(cmake/ssl.cmake)
+@@ -25968,10 +25975,12 @@ if(gRPC_INSTALL)
+     DESTINATION ${gRPC_INSTALL_CMAKEDIR}
+     NAMESPACE gRPC::
+   )
+-  install(EXPORT gRPCPluginTargets
+-    DESTINATION ${gRPC_INSTALL_CMAKEDIR}
+-    NAMESPACE gRPC::
+-  )
++  if(gRPC_BUILD_CODEGEN)
++    install(EXPORT gRPCPluginTargets
++      DESTINATION ${gRPC_INSTALL_CMAKEDIR}
++      NAMESPACE gRPC::
++    )
++  endif()
+ endif()
+ 
+ include(CMakePackageConfigHelpers)
+-- 
+2.40.1.windows.1
+
